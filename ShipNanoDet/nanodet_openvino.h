@@ -35,12 +35,12 @@ typedef struct BoxInfo
     int label;
 } BoxInfo;
 
-class NanoDet
+class NanoDetVINO
 {
 public:
-    NanoDet(const char* param);
+    NanoDetVINO(const char* param);
 
-    ~NanoDet();
+    ~NanoDetVINO();
 
     InferenceEngine::ExecutableNetwork network_;
     InferenceEngine::InferRequest infer_request_;

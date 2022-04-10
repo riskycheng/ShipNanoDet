@@ -1,0 +1,97 @@
+#pragma once
+//
+// Create by RangiLyu
+// 2020 / 10 / 2
+//
+
+#ifndef NANODET_H
+#define NANODET_H
+
+#include <opencv2/core/core.hpp>
+#include <net.h>
+#define NMS_THRESHOLD 0.5F
+struct AppConfig {
+    // the input info, do not need to parse from json, just for external usage
+    int input_width = 0;
+    int input_height = 0;
+
+    // the warning line points
+    int x1 = 0;
+    int y1 = 0;
+    int x2 = 300;
+    int y2 = 720;
+
+    // thresh for detector
+    float det_conf_thresh = 0.5f;
+
+    // use GPU or CPU
+    bool use_GPU = false;
+
+    // it will trigger the warning monitoring
+    int thresh_overlap_px = 100;
+
+    // least count of trigger the warning
+    int min_continousOverlapCount = 10;
+
+    // the cycle of conducting caculation of detector
+    int detect_cycle = 4;
+
+    // number of threads to use up of the available CPU cores
+    int num_threads = 16;
+};
+
+typedef struct HeadInfo
+{
+    std::string cls_layer;
+    std::string dis_layer;
+    int stride;
+};
+
+struct CenterPrior
+{
+    int x;
+    int y;
+    int stride;
+};
+
+typedef struct BoxInfo
+{
+    float x1;
+    float y1;
+    float x2;
+    float y2;
+    float score;
+    int label;
+} BoxInfo;
+
+class NanoDet
+{
+public:
+    NanoDet(const char* param, const char* bin, AppConfig* appConfig);
+
+    ~NanoDet();
+
+    static NanoDet* detector;
+    ncnn::Net* Net;
+    static bool hasGPU;
+    // modify these parameters to the same with your config if you want to use your own model
+    int input_size[2] = { 416, 416 }; // input height and width
+    int num_class = 1; // number of classes. 80 for COCO
+    int reg_max = 7; // `reg_max` set in the training config. Default: 7.
+    std::vector<int> strides = { 8, 16, 32, 64 }; // strides of the multi-level feature.
+
+    std::vector<BoxInfo> detect(cv::Mat image, float nms_threshold = NMS_THRESHOLD);
+
+    std::vector<std::string> labels{ "ship" };
+private:
+    void preprocess(cv::Mat& image, ncnn::Mat& in);
+    void decode_infer(ncnn::Mat& feats, std::vector<CenterPrior>& center_priors, float threshold, std::vector<std::vector<BoxInfo>>& results);
+    BoxInfo disPred2Bbox(const float*& dfl_det, int label, float score, int x, int y, int stride);
+    static void nms(std::vector<BoxInfo>& result, float nms_threshold);
+
+    AppConfig mAppConfig;
+
+};
+
+
+#endif //NANODET_H

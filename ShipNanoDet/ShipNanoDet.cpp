@@ -3,15 +3,11 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
+#include "Utils.h"
 
-struct object_rect {
-    int x;
-    int y;
-    int width;
-    int height;
-};
 
-int resize_uniform(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_rect& effect_area)
+
+int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_rect& effect_area)
 {
     int w = src.cols;
     int h = src.rows;
@@ -207,7 +203,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 }
 
 
-int image_demo(NanoDet& detector, const char* imagepath)
+int image_demo(NanoDetVINO& detector, const char* imagepath)
 {
     // const char* imagepath = "D:/Dataset/coco/val2017/*.jpg";
 
@@ -226,7 +222,7 @@ int image_demo(NanoDet& detector, const char* imagepath)
         }
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
+        resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(0);
@@ -235,7 +231,7 @@ int image_demo(NanoDet& detector, const char* imagepath)
     return 0;
 }
 
-int webcam_demo(NanoDet& detector, int cam_id)
+int webcam_demo(NanoDetVINO& detector, int cam_id)
 {
     cv::Mat image;
     cv::VideoCapture cap(cam_id);
@@ -248,7 +244,7 @@ int webcam_demo(NanoDet& detector, int cam_id)
         cap >> image;
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
+        resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(1);
@@ -256,7 +252,7 @@ int webcam_demo(NanoDet& detector, int cam_id)
     return 0;
 }
 
-int video_demo(NanoDet& detector, const char* path)
+int video_demo(NanoDetVINO& detector, const char* path)
 {
     cv::Mat image;
     cv::VideoCapture cap(path);
@@ -274,7 +270,7 @@ int video_demo(NanoDet& detector, const char* path)
 
         object_rect effect_roi;
         cv::Mat resized_img;
-        resize_uniform(image, resized_img, cv::Size(width, height), effect_roi);
+        resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
         auto results = detector.detect(resized_img, 0.4, 0.5);
         draw_bboxes(image, results, effect_roi);
         cv::waitKey(1);
@@ -282,7 +278,7 @@ int video_demo(NanoDet& detector, const char* path)
     return 0;
 }
 
-int benchmark(NanoDet& detector)
+int benchmark(NanoDetVINO& detector)
 {
     int loop_num = 100;
     int warm_up = 8;
@@ -315,7 +311,7 @@ int benchmark(NanoDet& detector)
 }
 
 
-int main(int argc, char** argv)
+int main_ViNO(int argc, char** argv)
 {
     if (argc != 3)
     {
@@ -325,7 +321,7 @@ int main(int argc, char** argv)
     std::cout << "start init model" << std::endl;
 
     // model path
-    auto detector = NanoDet("nanodet.xml");
+    auto detector = NanoDetVINO("nanodet.xml");
     std::cout << "success" << std::endl;
 
     int mode = atoi(argv[1]);
