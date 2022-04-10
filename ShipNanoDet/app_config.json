@@ -1,0 +1,55 @@
+{
+  // Deep Learning detector module related
+  "detector": {
+    /* 
+    summary: the threshold od detection confidence, detection valid when above this value
+    note   : range from[0.0, 1.0], the higher, more strict filter will be applied.
+    */
+    "det_conf_thresh": 0.4,
+
+    /* 
+    summary: whether use GPU or not, if it is set to false, it will use CPU instead
+    note   : true for GPU, false for CPU
+    */
+    "use_GPU": false
+  },
+
+  // Application pipeline related
+  "application": {
+    /*
+    summary: the warning line definition with starting and ending point coordinates
+    note   : ensure the coordinates inside the image dimension ranges
+    */
+    "dangerous_region": {
+      "x1": 300,
+      "y1": 0,
+      "x2": 600,
+      "y2": 1080
+    },
+
+    /*
+    summary: the pixel thresh of the overlapped portion between warning line and bounding box
+    note   : the smaller, the more sensitive; the higher, the less sensitive
+    */
+    "thresh_overlap_px": 10,
+
+    /*
+    summary: trigger the actual warning when reaching this number of overlapping
+    note   : the smaller, the more sensitive; the higher, the less sensitive
+    */
+    "min_continousOverlapCount": 10,
+
+    /*
+    summary: the detection is performed every N frames
+    note   : the smaller, the more frequent, the higher, the less frequent
+    */
+    "detect_cycle": 4,
+
+    /*
+    summary: the threads number to do the detection
+    note   : threads will be assigned to different CPU cores, the higher, more CPU cores will be
+    occupied, so the higher CPU load will be observed, but it will be faster.
+    */
+    "num_threads": 8
+  }
+}

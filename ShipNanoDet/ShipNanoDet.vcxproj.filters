@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ShipNanoDet.cpp">
+    <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="nanodet_openvino.cpp">
@@ -35,9 +35,6 @@
     <ClInclude Include="nanodet_openvino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="json.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -47,5 +44,10 @@
     <ClInclude Include="nanodet_plus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app_config.json">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

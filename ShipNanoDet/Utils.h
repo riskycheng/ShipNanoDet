@@ -5,7 +5,7 @@
 
 using namespace cv;
 
-struct  AppConfigT {
+struct  AppConfig {
     // the input info, do not need to parse from json, just for external usage
     int input_width = 0;
     int input_height = 0;

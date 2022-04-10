@@ -76,9 +76,10 @@ NanoDet::NanoDet(const char* param, const char* bin, AppConfig* appConfig)
     // opt
 #if NCNN_VULKAN
     this->hasGPU = ncnn::get_gpu_count() > 0;
+    printf("this->hasGPU :%s \n", this->hasGPU ? "true" : "false");
 #endif
-    this->Net->opt.use_vulkan_compute = 1; // this->hasGPU&& mAppConfig.use_GPU;
-   // this->Net->opt.use_fp16_arithmetic = true;
+    this->Net->opt.use_vulkan_compute = this->hasGPU && mAppConfig.use_GPU;
+    this->Net->opt.use_fp16_arithmetic = true;
     this->Net->load_param(param);
     this->Net->load_model(bin);
 }
@@ -112,7 +113,7 @@ std::vector<BoxInfo> NanoDet::detect(cv::Mat image, float nms_threshold)
     ex.set_light_mode(false);
     ex.set_num_threads(mAppConfig.num_threads);
 #if NCNN_VULKAN
-    ex.set_vulkan_compute(this->hasGPU);
+    ex.set_vulkan_compute(this->hasGPU && mAppConfig.use_GPU);
 #endif
     ex.input("data", input);
 

@@ -56,8 +56,12 @@ static void generate_grid_center_priors(const int input_height, const int input_
     }
 }
 
-NanoDetVINO::NanoDetVINO(const char* model_path)
+NanoDetVINO::NanoDetVINO(const char* model_path, AppConfig_* appConfig)
 {
+    printf("start initializing NanoDetVINO instance ...\n");
+    // cache the appConfig
+    memcpy(&mAppConfig, appConfig, sizeof(AppConfig_));
+
     InferenceEngine::Core ie;
     InferenceEngine::CNNNetwork model = ie.ReadNetwork(model_path);
     // prepare input settings
@@ -119,7 +123,7 @@ void NanoDetVINO::preprocess(cv::Mat& image, InferenceEngine::Blob::Ptr& blob)
     }
 }
 
-std::vector<BoxInfo> NanoDetVINO::detect(cv::Mat image, float score_threshold, float nms_threshold)
+std::vector<BoxInfo> NanoDetVINO::detect(cv::Mat image, float nms_threshold)
 {
     //auto start = std::chrono::steady_clock::now();
 
@@ -144,7 +148,7 @@ std::vector<BoxInfo> NanoDetVINO::detect(cv::Mat image, float score_threshold, f
         std::vector<CenterPrior> center_priors;
         generate_grid_center_priors(this->input_size[0], this->input_size[1], this->strides, center_priors);
 
-        this->decode_infer(pred, center_priors, score_threshold, results);
+        this->decode_infer(pred, center_priors, mAppConfig.det_conf_thresh, results);
     }
 
     std::vector<BoxInfo> dets;

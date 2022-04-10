@@ -11,6 +11,43 @@
 #include <inference_engine.hpp>
 
 
+struct  AppConfig_ {
+    // the input info, do not need to parse from json, just for external usage
+    int input_width = 0;
+    int input_height = 0;
+
+    // the warning line points
+    int x1 = 0;
+    int y1 = 0;
+    int x2 = 300;
+    int y2 = 720;
+
+    // thresh for detector
+    float det_conf_thresh = 0.5f;
+
+    // use GPU or CPU
+    bool use_GPU = false;
+
+    // it will trigger the warning monitoring
+    int thresh_overlap_px = 100;
+
+    // least count of trigger the warning
+    int min_continousOverlapCount = 10;
+
+    // the cycle of conducting caculation of detector
+    int detect_cycle = 4;
+
+    // number of threads to use up of the available CPU cores
+    int num_threads = 16;
+};
+
+struct object_rect_ {
+    int x;
+    int y;
+    int width;
+    int height;
+};
+
 typedef struct HeadInfo
 {
     std::string cls_layer;
@@ -38,7 +75,7 @@ typedef struct BoxInfo
 class NanoDetVINO
 {
 public:
-    NanoDetVINO(const char* param);
+    NanoDetVINO(const char* param, AppConfig_* appConfig);
 
     ~NanoDetVINO();
 
@@ -52,7 +89,7 @@ public:
     int reg_max = 7; // `reg_max` set in the training config. Default: 7.
     std::vector<int> strides = { 8, 16, 32, 64 }; // strides of the multi-level feature.
 
-    std::vector<BoxInfo> detect(cv::Mat image, float score_threshold, float nms_threshold);
+    std::vector<BoxInfo> detect(cv::Mat image, float nms_threshold=0.5);
 
 private:
     void preprocess(cv::Mat& image, InferenceEngine::Blob::Ptr& blob);
@@ -61,6 +98,8 @@ private:
     static void nms(std::vector<BoxInfo>& result, float nms_threshold);
     std::string input_name_ = "data";
     std::string output_name_ = "output";
+
+    AppConfig_ mAppConfig;
 };
 
 

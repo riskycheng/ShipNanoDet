@@ -4,7 +4,6 @@
 #include <benchmark.h>
 #include <fstream>
 #include "json.h"
-#include "Utils.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -13,7 +12,12 @@ using namespace Json;
 using namespace std;
 using namespace cv;
 
-
+struct object_rect {
+	int x;
+	int y;
+	int width;
+	int height;
+};
 
 bool touchWarningLines(AppConfig* appConfig, vector<BoxInfo>& boxes, object_rect effect_roi);
 
@@ -111,6 +115,7 @@ AppConfig parseConfig(const std::string jsonConfigPath) {
 	// start updating for these fields
 	AppConfig appConfig = AppConfig();
 	appConfig.det_conf_thresh = det_conf_thresh;
+	appConfig.use_GPU = use_GPU;
 	appConfig.x1 = x1;
 	appConfig.y1 = y1;
 	appConfig.x2 = x2;
@@ -228,7 +233,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 			cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
 	}
 
-	cv::imshow("shipDet v_nanodet_plus_m416_20220322", image);
+	cv::imshow("shipDet v1.3_20220410_NCNN_CPU-GPU", image);
 }
 
 BoxInfo mapCoordinates(AppConfig* appConfig, BoxInfo box, object_rect effect_roi) {
@@ -397,7 +402,7 @@ int video_demo(NanoDet& detector, const char* path, AppConfig* appConfig)
 			end = clock();
 			cost = difftime(end, start);
 			touchedWarning = touchWarningLines(appConfig, results, effect_roi);
-			printf("inference video with CPU cost: %.2f ms \n", cost);
+			printf("inference video with %s cost: %.2f ms \n", appConfig->use_GPU ? "GPU" :"CPU", cost);
 			draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
 			cv::waitKey(1);
 			resized_img.release();
@@ -425,8 +430,8 @@ int main(int argc, char** argv)
 	// parse the video file path
 	std::string videoFilePath = argv[2];
 
-	NanoDet detector = NanoDet("./models/nanoDetPlus_m_416_half.param", "./models/nanoDetPlus_m_416_half.bin", &appConfig);
-
+	NanoDet detector = NanoDet("./models/ncnnModel/nanoDetPlus_m_416_half.param", "./models/ncnnModel/nanoDetPlus_m_416_half.bin", &appConfig);
+	std::cout << "success to load the NCNN model" << std::endl;
 	video_demo(detector, videoFilePath.c_str(), &appConfig);
 
 	return 0;

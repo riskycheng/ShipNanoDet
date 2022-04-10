@@ -151,14 +151,16 @@
     <ClCompile Include="nanodet_openvino.cpp" />
     <ClCompile Include="nanodet_plus.cpp" />
     <ClCompile Include="ShipDetWithNcnnNanoDet.cpp" />
-    <ClCompile Include="ShipNanoDet.cpp" />
+    <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="json-forwards.h" />
     <ClInclude Include="json.h" />
     <ClInclude Include="nanodet_openvino.h" />
     <ClInclude Include="nanodet_plus.h" />
-    <ClInclude Include="Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app_config.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
