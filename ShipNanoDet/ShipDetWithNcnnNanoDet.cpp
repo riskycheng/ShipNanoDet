@@ -232,8 +232,10 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 		cv::putText(image, warningTxt, cv::Point(text_x, text_y),
 			cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
 	}
-
-	cv::imshow("shipDet v1.3_20220410_NCNN_CPU-GPU", image);
+	Mat tmpMat;
+	resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
+	cv::imshow("shipDet v1.3_20220410_NCNN_CPU-GPU", tmpMat);
+	tmpMat.release();
 }
 
 BoxInfo mapCoordinates(AppConfig* appConfig, BoxInfo box, object_rect effect_roi) {
@@ -408,13 +410,15 @@ int video_demo(NanoDet& detector, const char* path, AppConfig* appConfig)
 			resized_img.release();
 		}
 	}
-	image.release();
-	cap.release();
+	if (cap.isOpened())
+		cap.release();
+	if (image.data != nullptr)
+		image.release();
 	return 0;
 }
 
 
-int main(int argc, char** argv)
+int main_ncnn(int argc, char** argv)
 {
 	if (argc != 3)
 	{

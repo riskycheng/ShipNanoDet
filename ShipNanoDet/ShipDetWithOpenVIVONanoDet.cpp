@@ -337,8 +337,10 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
         cv::putText(image, warningTxt, cv::Point(text_x, text_y),
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
-
-    cv::imshow("shipDet v1.3_20220410_openVINO", image);
+    Mat tmpMat;
+    resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
+    cv::imshow("shipDet v1.3_20220410_openVINO", tmpMat);
+    tmpMat.release();
 }
 
 
@@ -398,14 +400,16 @@ int video_demo(NanoDetVINO& detector, const char* path, AppConfig_* appConfig)
             resized_img.release();
         }
     }
-    image.release();
-    cap.release();
+    if (cap.isOpened())
+        cap.release();
+    if (image.data != nullptr)
+        image.release();
     return 0;
 }
 
 
 
-int main_vino(int argc, char** argv)
+int main(int argc, char** argv)
 {
     if (argc != 3)
     {
