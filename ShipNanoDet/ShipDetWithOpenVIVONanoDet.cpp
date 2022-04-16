@@ -10,7 +10,7 @@ using namespace Json;
 using namespace std;
 using namespace cv;
 
-
+void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
 
 BoxInfo mapCoordinates(AppConfig_* appConfig, BoxInfo box, object_rect_ effect_roi) {
@@ -34,10 +34,133 @@ BoxInfo mapCoordinates(AppConfig_* appConfig, BoxInfo box, object_rect_ effect_r
     return result;
 }
 
+
+
+void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed)
+{
+    vector<vector<Point>> contours;
+    contours.push_back(polygonPoint);
+
+    if (bIsFill)
+        fillPoly(inputImage, contours, Scalar(0, 0, 255), 8);
+    else
+        polylines(inputImage, polygonPoint, bIsClosed, Scalar(0, 0, 255), 2, 8);
+}
+
+
 // the global static value indicating the hit count
 static int dangerousHitCnt = 0;
 
 bool touchWarningLines(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rect_ effect_roi);
+bool touchWarningLinesPologyn(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rect_ effect_roi);
+
+bool touchWarningLinesPologyn(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rect_ effect_roi)
+{
+    // x = x1 + (y - y1) * delta ; delta = ((x2 - x1) / (y2 - y1))
+    float delta_right = float(appConfig->x2 - appConfig->x3) / float(appConfig->y2 - appConfig->y3);
+    float delta_left = float(appConfig->x1 - appConfig->x4) / float(appConfig->y1 - appConfig->y4);
+    
+    int centerX = (appConfig->x1 + appConfig->x3) / 2;
+    bool isInLeft = (centerX <= appConfig->input_width / 2);
+
+    int targetIndex = 0;
+    int minX = 10000;
+    int maxX = 0;
+    for (int i = 0; i < boxes.size(); i++)
+    {
+        auto item = mapCoordinates(appConfig, boxes[i], effect_roi);
+        if (isInLeft)
+        {
+            if (item.x1 < minX)
+            {
+                minX = item.x1;
+                targetIndex = i;
+            }
+        }
+        else
+        {
+            if (item.x2 > maxX)
+            {
+                maxX = item.x2;
+                targetIndex = i;
+            }
+        }
+    }
+
+    bool touched = false;
+
+    int thresh_dis = appConfig->thresh_overlap_px;
+    int thresh_cnt = appConfig->min_continousOverlapCount;
+    bool tmpTouched = false;
+
+    // start cal the distance
+    auto boxInfo = mapCoordinates(appConfig, boxes[targetIndex], effect_roi);
+        
+    // x = x2 + (y - y2) * delta ; delta = ((x2 - x1) / (y2 - y1))
+    auto tmp_x_right_up   = appConfig->x2 + (boxInfo.y1 - appConfig->y2) * delta_right;
+    auto tmp_x_right_down = appConfig->x2 + (boxInfo.y2 - appConfig->y2) * delta_right;
+    auto tmp_x_left_up    = appConfig->x1 + (boxInfo.y1 - appConfig->y1) * delta_left;
+    auto tmp_x_left_down  = appConfig->x1 + (boxInfo.y2 - appConfig->y1) * delta_left;
+   
+    // newly constructed rectangle
+    auto dangerousRegion_x1 = min(tmp_x_left_up, tmp_x_left_down);
+    auto dangerousRegion_y1 = boxInfo.y1;
+    auto dangerousRegion_x2 = max(tmp_x_right_up, tmp_x_right_down);
+    auto dangerousRegion_y2 = boxInfo.y2;
+
+    // start calculating the touching status >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if (boxInfo.x2 < dangerousRegion_x1 || boxInfo.x1 > dangerousRegion_x2)
+    {
+        // it is outside the region
+        tmpTouched = false;
+    }
+    else if (boxInfo.x2 > dangerousRegion_x1 && boxInfo.x2 < dangerousRegion_x2)
+    {
+        if ((boxInfo.x2 - dangerousRegion_x1) >= thresh_dis)
+        {
+            // partial inside: right
+            tmpTouched = true;
+        }
+    }
+    else if (boxInfo.x1 > dangerousRegion_x1 && boxInfo.x1 < dangerousRegion_x2)
+    {
+        if ((dangerousRegion_x2 - boxInfo.x1) >= thresh_dis)
+        {
+            // partial inside: left
+            tmpTouched = true;
+        }
+    }
+    else if (boxInfo.x1 < dangerousRegion_x1 && boxInfo.x2 > dangerousRegion_x2)
+    {
+        // box includes dangerous region
+        tmpTouched = true;
+    }
+    else if (boxInfo.x1 > dangerousRegion_x1 && boxInfo.x2 < dangerousRegion_x2)
+    {
+        // dangerous region includes box
+        tmpTouched = true;
+    }
+
+    if (tmpTouched)
+    {
+        dangerousHitCnt++;
+    }
+    else
+    {
+        dangerousHitCnt = 0;
+    }
+
+    if (tmpTouched && dangerousHitCnt >= thresh_cnt)
+    {
+        touched = true;
+    }
+    else
+    {
+        touched = false;
+    }
+    return touched;
+}
+
 
 
 bool touchWarningLines(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rect_ effect_roi) {
@@ -148,6 +271,10 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
     int y1 = root["application"]["dangerous_region"]["y1"].asInt();
     int x2 = root["application"]["dangerous_region"]["x2"].asInt();
     int y2 = root["application"]["dangerous_region"]["y2"].asInt();
+    int x3 = root["application"]["dangerous_region"]["x3"].asInt();
+    int y3 = root["application"]["dangerous_region"]["y3"].asInt();
+    int x4 = root["application"]["dangerous_region"]["x4"].asInt();
+    int y4 = root["application"]["dangerous_region"]["y4"].asInt();
 
     int thresh_overlap_px = root["application"]["thresh_overlap_px"].asInt();
 
@@ -155,7 +282,7 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
 
     int detect_cycle = root["application"]["detect_cycle"].asInt();
 
-    int num_threads = root["application"]["num_threads"].asInt();
+    int num_threads = root["applicati on"]["num_threads"].asInt();
 
 
     // start updating for these fields
@@ -165,6 +292,10 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
     appConfig.y1 = y1;
     appConfig.x2 = x2;
     appConfig.y2 = y2;
+    appConfig.x3 = x3;
+    appConfig.y3 = y3;
+    appConfig.x4 = x4;
+    appConfig.y4 = y4;
 
     appConfig.thresh_overlap_px = thresh_overlap_px;
 
@@ -184,7 +315,9 @@ void printAppConfig(const AppConfig_& appConfig) {
     printf("\t det_conf_thresh:%.2f\n", appConfig.det_conf_thresh);
     printf("\t use_GPU:%s\n", appConfig.use_GPU ? "true" : "false");
     printf("Application related:\n");
-    printf("\t warning_line: [%d, %d] -> [%d, %d]\n", appConfig.x1, appConfig.y1, appConfig.x2, appConfig.y2);
+    printf("\t warning_line: [%d, %d] -> [%d, %d] -> [%d, %d] -> [%d, %d]\n", 
+        appConfig.x1, appConfig.y1, appConfig.x2, appConfig.y2,
+        appConfig.x3, appConfig.y3, appConfig.x4, appConfig.y4);
     printf("\t thresh_overlap_px:%d\n", appConfig.thresh_overlap_px);
     printf("\t min_continousOverlapCount:%d\n", appConfig.min_continousOverlapCount);
     printf("\t detect_cycle:%d\n", appConfig.detect_cycle);
@@ -304,7 +437,14 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
     }
 
     // render the dangerous region
-    cv::rectangle(image, cv::Rect(cv::Point(appConfig->x1, appConfig->y1), cv::Point(appConfig->x2, appConfig->y2)), cv::Scalar(0, 0, 255), 2);
+    //cv::rectangle(image, cv::Rect(cv::Point(appConfig->x1, appConfig->y1), cv::Point(appConfig->x2, appConfig->y2)), cv::Scalar(0, 0, 255), 2);
+    vector<Point> points;
+    points.push_back(cv::Point(appConfig->x1, appConfig->y1));
+    points.push_back(cv::Point(appConfig->x2, appConfig->y2));
+    points.push_back(cv::Point(appConfig->x3, appConfig->y3));
+    points.push_back(cv::Point(appConfig->x4, appConfig->y4));
+    DrawPolygon(image, points, false);
+    
     // render the text hint to indicate it is dangerous region
     string dangerousRegionName = "dangerous region";
     auto baseLine = 0;
@@ -339,7 +479,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
     }
     Mat tmpMat;
     resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.3_20220410_openVINO", tmpMat);
+    cv::imshow("shipDet v1.4_20220416_openVINO", tmpMat);
     tmpMat.release();
 }
 
@@ -393,7 +533,7 @@ int video_demo(NanoDetVINO& detector, const char* path, AppConfig_* appConfig)
             results = detector.detect(resized_img);
             end = clock();
             cost = difftime(end, start);
-            touchedWarning = touchWarningLines(appConfig, results, effect_roi);
+            touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
             printf("inference video with OpenVINO cost: %.2f ms \n", cost);
             draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
             cv::waitKey(1);
@@ -409,7 +549,7 @@ int video_demo(NanoDetVINO& detector, const char* path, AppConfig_* appConfig)
 
 
 
-int main(int argc, char** argv)
+int main_vino(int argc, char** argv)
 {
     if (argc != 3)
     {

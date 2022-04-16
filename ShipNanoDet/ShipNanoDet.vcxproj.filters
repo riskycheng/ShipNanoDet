@@ -49,5 +49,8 @@
     <None Include="app_config.json">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="..\..\..\..\PrivProjects\[2022.03.15] 闸门船舶检测\Delivery\v1.3_20220410_vino\Release\app_config.json">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -16,10 +16,14 @@ struct AppConfig {
     int input_height = 0;
 
     // the warning line points
-    int x1 = 0;
+    int x1 = 300;
     int y1 = 0;
-    int x2 = 300;
-    int y2 = 720;
+    int x2 = 600;
+    int y2 = 0;
+    int x3 = 600;
+    int y3 = 1920;
+    int x4 = 300;
+    int y4 = 1920;
 
     // thresh for detector
     float det_conf_thresh = 0.5f;

@@ -18,13 +18,18 @@
   "application": {
     /*
     summary: the warning line definition with starting and ending point coordinates
-    note   : ensure the coordinates inside the image dimension ranges
+    note   : ensure the coordinates inside the image dimension ranges.
+             the rectangle could be rotated, order by left-top, right-top, bottom-right, bottom_left
     */
     "dangerous_region": {
-      "x1": 300,
+      "x1": 1600,
       "y1": 0,
-      "x2": 600,
-      "y2": 1080
+      "x2": 1800,
+      "y2": 0,
+      "x3": 400,
+      "y3": 1080,
+      "x4": 200,
+      "y4": 1080
     },
 
     /*
