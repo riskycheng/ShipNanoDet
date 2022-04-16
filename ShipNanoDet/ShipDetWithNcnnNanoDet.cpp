@@ -219,7 +219,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 	string dangerousRegionName = "dangerous region";
 	auto baseLine = 0;
 	auto label_size = cv::getTextSize(dangerousRegionName, cv::FONT_HERSHEY_PLAIN, 0.6f, 1, &baseLine);
-	cv::putText(image, dangerousRegionName.c_str(), cv::Point(appConfig->x2 - label_size.width / 0.5f, appConfig->y2 - label_size.height),
+	cv::putText(image, dangerousRegionName.c_str(), cv::Point(appConfig->x3 - label_size.width / 0.5f, appConfig->y3 - label_size.height),
 		cv::FONT_HERSHEY_SIMPLEX, 0.6f, cv::Scalar(255, 255, 255));
 
 	// render the dangerous hint if hit
@@ -528,6 +528,7 @@ int video_demo(NanoDet& detector, const char* path, AppConfig* appConfig)
 		{
 			// not inference, use the previous one
 			printf("use the previous inferred result...\n");
+			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
 			draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
 			cv::waitKey(30);
 		}
