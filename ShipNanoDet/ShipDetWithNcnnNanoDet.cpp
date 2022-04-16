@@ -7,6 +7,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "commonDef.h"
 
 using namespace Json;
 using namespace std;
@@ -23,7 +24,17 @@ bool touchWarningLines(AppConfig* appConfig, vector<BoxInfo>& boxes, object_rect
 bool touchWarningLinesPologyn(AppConfig* appConfig, vector<BoxInfo>& boxes, object_rect effect_roi);
 void DrawPolygon_(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
-
+void printFrameResult(FrameResult result) {
+	printf("******************** FrameResult *********************\n");
+	printf("frameID:%d\n", result.frameID);
+	printf("In Danger:%s\n",result.isInDanger ? "true" : "false");
+	printf("Detected Ships:\n");
+	for (auto& ship : result.boxes)
+	{
+		printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f] \n", ship.x, ship.y, ship.width, ship.height, ship.conf);
+	}
+	printf("******************** FrameResult *********************\n");
+}
 
 int resize_uniform_NCNN(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_rect& effect_area)
 {
@@ -232,11 +243,11 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 	int warningBox_x2 = (appConfig->input_width + warningBoxWidth) / 2;
 	int warningBox_y2 = warningBox_y1 + warningBoxHeight;
 	auto warningBoxRect = cv::Rect(cv::Point(warningBox_x1, warningBox_y1), cv::Point(warningBox_x2, warningBox_y2));
-	
+
 	if (warning)
 	{
 		// render the out-lier
-		cv::rectangle(image, warningBoxRect, cv::Scalar(50, 120, 250),  6);
+		cv::rectangle(image, warningBoxRect, cv::Scalar(50, 120, 250), 6);
 		// fill in
 		cv::rectangle(image, warningBoxRect, cv::Scalar(50, 200, 250), -1);
 		// render the text
@@ -362,7 +373,7 @@ bool touchWarningLines(AppConfig* appConfig, vector<BoxInfo>& boxes, object_rect
 		// dangerous region includes box
 		tmpTouched = true;
 	}
-	
+
 	if (tmpTouched)
 	{
 		dangerousHitCnt++;
@@ -493,67 +504,66 @@ bool touchWarningLinesPologyn(AppConfig* appConfig, vector<BoxInfo>& boxes, obje
 }
 
 
-int video_demo(NanoDet& detector, const char* path, AppConfig* appConfig)
-{
-	cv::Mat image;
-	cv::VideoCapture cap(path);
+FrameResult imageRun(int frameID, NanoDet& detector, Mat& image, AppConfig* appConfig, bool skip) {
 	int height = detector.input_size[0];
 	int width = detector.input_size[1];
 
 	// buffered results
 	std::vector<BoxInfo> results;
 
+	FrameResult frameResult = FrameResult();
 
 	clock_t start, end;
 	double cost;
 	int frameIndex = 0;
 	int cycle = appConfig->detect_cycle;
-	object_rect effect_roi;
+	object_rect effect_roi{};
 	bool touchedWarning = false;
-	while (true)
+	if (skip)
 	{
-		cap >> image;
-
-		if (image.data == nullptr)
-		{
-			printf("end of video, exiting... \n");
-			break;
-		}
-
+		// not inference, use the previous one
+		printf("use the previous inferred result...\n");
+		touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+		draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+		cv::waitKey(30);
+	}
+	else
+	{
 		int img_width = image.cols;
 		int img_height = image.rows;
 		appConfig->input_height = img_height;
 		appConfig->input_width = img_width;
-		if (frameIndex++ % cycle != 0)
-		{
-			// not inference, use the previous one
-			printf("use the previous inferred result...\n");
-			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-			draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-			cv::waitKey(30);
-		}
-		else
-		{
-			// do the inference
-			cv::Mat resized_img;
-			start = clock();
-			resize_uniform_NCNN(image, resized_img, cv::Size(width, height), effect_roi);
-			results = detector.detect(resized_img);
-			end = clock();
-			cost = difftime(end, start);
-			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-			printf("inference video with %s cost: %.2f ms \n", appConfig->use_GPU ? "GPU" :"CPU", cost);
-			draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-			cv::waitKey(1);
-			resized_img.release();
-		}
+		// do the inference
+		cv::Mat resized_img;
+		start = clock();
+		resize_uniform_NCNN(image, resized_img, cv::Size(width, height), effect_roi);
+		results = detector.detect(resized_img);
+		end = clock();
+		cost = difftime(end, start);
+		touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+		printf("inference video with %s cost: %.2f ms \n", appConfig->use_GPU ? "GPU" : "CPU", cost);
+		draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+		cv::waitKey(1);
+		resized_img.release();
 	}
-	if (cap.isOpened())
-		cap.release();
-	if (image.data != nullptr)
-		image.release();
-	return 0;
+
+	// update fields of FrameResult
+	frameResult.frameID = frameID;
+	for (BoxInfo box : results)
+	{
+		auto shipBox = ShipBox();
+		shipBox.x = box.x1;
+		shipBox.y = box.y1;
+		shipBox.width = box.x2 - box.x1;
+		shipBox.height = box.y2 = box.y1;
+		shipBox.conf = box.score;
+		frameResult.boxes.push_back(shipBox);
+	}
+	frameResult.isInDanger = touchedWarning;
+
+	return frameResult;
 }
+
 
 
 int main(int argc, char** argv)
@@ -574,7 +584,41 @@ int main(int argc, char** argv)
 
 	NanoDet detector = NanoDet("./models/ncnnModel/nanoDetPlus_m_416_half.param", "./models/ncnnModel/nanoDetPlus_m_416_half.bin", &appConfig);
 	std::cout << "success to load the NCNN model" << std::endl;
-	video_demo(detector, videoFilePath.c_str(), &appConfig);
 
+
+	cv::Mat image;
+	cv::VideoCapture cap(videoFilePath.c_str());
+	
+	int cycle = appConfig.detect_cycle;
+	FrameResult frameResult;
+	int frameIndex = 0;
+	while (true)
+	{
+		cap >> image;
+
+		if (image.data == nullptr)
+		{
+			printf("end of video, exiting... \n");
+			break;
+		}
+
+		if (frameIndex % cycle != 0)
+		{
+			// not inference, use the previous one
+			frameResult = imageRun(frameIndex, detector, image, &appConfig, true);
+			cv::waitKey(30);
+		}
+		else
+		{
+			// do the inference
+			frameResult = imageRun(frameIndex, detector, image, &appConfig, false);
+		}
+
+		frameIndex++;
+		// print out metrics
+		printFrameResult(frameResult);
+	}
+	image.release();
+	cap.release();
 	return 0;
 }

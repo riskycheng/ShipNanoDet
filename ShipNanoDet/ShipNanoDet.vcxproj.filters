@@ -44,6 +44,9 @@
     <ClInclude Include="nanodet_plus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="commonDef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="app_config.json">

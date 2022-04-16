@@ -5,14 +5,24 @@
 #include <iostream>
 #include "json.h"
 #include <fstream>
-
+#include "commonDef.h"
 using namespace Json;
 using namespace std;
 using namespace cv;
 
 void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
-
+void printFrameResult_(FrameResult result) {
+    printf("******************** FrameResult *********************\n");
+    printf("frameID:%d\n", result.frameID);
+    printf("In Danger:%s\n", result.isInDanger ? "true" : "false");
+    printf("Detected Ships:\n");
+    for (auto& ship : result.boxes)
+    {
+        printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f] \n", ship.x, ship.y, ship.width, ship.height, ship.conf);
+    }
+    printf("******************** FrameResult *********************\n");
+}
 BoxInfo mapCoordinates(AppConfig_* appConfig, BoxInfo box, object_rect_ effect_roi) {
     BoxInfo result = BoxInfo();
 
@@ -483,74 +493,69 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
     tmpMat.release();
 }
 
-
-
-int video_demo(NanoDetVINO& detector, const char* path, AppConfig_* appConfig)
-{
-    cv::Mat image;
-    cv::VideoCapture cap(path);
-
+FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_* appConfig, bool skip) {
     int height = detector.input_size[0];
     int width = detector.input_size[1];
 
     // buffered results
     std::vector<BoxInfo> results;
 
+    FrameResult frameResult = FrameResult();
 
     clock_t start, end;
     double cost;
     int frameIndex = 0;
     int cycle = appConfig->detect_cycle;
-    object_rect_ effect_roi;
+    object_rect_ effect_roi{};
     bool touchedWarning = false;
-    while (true)
+    if (skip)
     {
-        cap >> image;
-
-        if (image.data == nullptr)
-        {
-            printf("end of video, exiting... \n");
-            break;
-        }
-
+        // not inference, use the previous one
+        printf("use the previous inferred result...\n");
+        touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+        draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+        cv::waitKey(30);
+    }
+    else
+    {
         int img_width = image.cols;
         int img_height = image.rows;
         appConfig->input_height = img_height;
         appConfig->input_width = img_width;
-        if (frameIndex++ % cycle != 0)
-        {
-            // not inference, use the previous one
-            printf("use the previous inferred result...\n");
-            touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-            cv::waitKey(30);
-        }
-        else
-        {
-            // do the inference
-            cv::Mat resized_img;
-            start = clock();
-            resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
-            results = detector.detect(resized_img);
-            end = clock();
-            cost = difftime(end, start);
-            touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-            printf("inference video with OpenVINO cost: %.2f ms \n", cost);
-            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-            cv::waitKey(1);
-            resized_img.release();
-        }
+        // do the inference
+        cv::Mat resized_img;
+        start = clock();
+        resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
+        results = detector.detect(resized_img);
+        end = clock();
+        cost = difftime(end, start);
+        touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+        printf("inference video with OpenVINO cost: %.2f ms \n", cost);
+        draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+        cv::waitKey(1);
+        resized_img.release();
     }
-    if (cap.isOpened())
-        cap.release();
-    if (image.data != nullptr)
-        image.release();
-    return 0;
+    // update fields of FrameResult
+    frameResult.frameID = frameID;
+    for (BoxInfo& box_ : results)
+    {
+        auto box = mapCoordinates(appConfig, box_, effect_roi);
+        auto shipBox = ShipBox();
+        shipBox.x = box.x1;
+        shipBox.y = box.y1;
+        shipBox.width = box.x2 - box.x1;
+        shipBox.height = box.y2 = box.y1;
+        shipBox.conf = box.score;
+        frameResult.boxes.push_back(shipBox);
+    }
+    frameResult.isInDanger = touchedWarning;
+
+    return frameResult;
 }
 
 
 
-int main_vino(int argc, char** argv)
+int main_(int argc, char** argv)
 {
     if (argc != 3)
     {
@@ -572,7 +577,39 @@ int main_vino(int argc, char** argv)
     auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &appConfig);
     std::cout << "success to load the openVINO model" << std::endl;
 
-    video_demo(detector, videoFilePath.c_str(), &appConfig);
+    cv::Mat image;
+    cv::VideoCapture cap(videoFilePath.c_str());
 
+    int cycle = appConfig.detect_cycle;
+    FrameResult frameResult;
+    int frameIndex = 0;
+    while (true)
+    {
+        cap >> image;
+
+        if (image.data == nullptr)
+        {
+            printf("end of video, exiting... \n");
+            break;
+        }
+
+        if (frameIndex % cycle != 0)
+        {
+            // not inference, use the previous one
+            frameResult = imageRun(frameIndex, detector, image, &appConfig, true);
+            cv::waitKey(30);
+        }
+        else
+        {
+            // do the inference
+            frameResult = imageRun(frameIndex, detector, image, &appConfig, false);
+        }
+
+        frameIndex++;
+        // print out metrics
+        printFrameResult_(frameResult);
+    }
+    image.release();
+    cap.release();
     return 0;
 }

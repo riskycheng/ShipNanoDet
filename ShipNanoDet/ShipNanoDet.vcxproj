@@ -154,6 +154,7 @@
     <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="commonDef.h" />
     <ClInclude Include="json-forwards.h" />
     <ClInclude Include="json.h" />
     <ClInclude Include="nanodet_openvino.h" />
