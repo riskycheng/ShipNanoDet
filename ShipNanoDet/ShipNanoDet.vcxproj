@@ -83,8 +83,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\opencv_4.1.2_release\include;D:\opencv_4.1.2_release\include\opencv2;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\ngraph\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\tbb\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\hddl\include;D:\ncnn_vulkan\static_release\include\glslang;D:\ncnn_vulkan\static_release\include\ncnn;D:\VulkanSDK\1.3.204.1\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv_4.1.2_release\x64\vc16\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\lib\intel64\Release;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\ngraph\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\hddl\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\tbb\lib;D:\ncnn_vulkan\static_release\lib;D:\VulkanSDK\1.3.204.1\Lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\opencv_4.1.2_release\include;D:\opencv_4.1.2_release\include\opencv2;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\ngraph\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\tbb\include;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\hddl\include;D:\ncnn_vulkan\static_release\include\glslang;D:\ncnn_vulkan\static_release\include\ncnn;D:\VulkanSDK\1.3.204.1\Include;D:\PublicResource\vlc-3.0.16\sdk\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv_4.1.2_release\x64\vc16\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\lib\intel64\Release;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\ngraph\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\hddl\lib;C:\Program Files (x86)\Intel\openvino_2021\deployment_tools\inference_engine\external\tbb\lib;D:\ncnn_vulkan\static_release\lib;D:\VulkanSDK\1.3.204.1\Lib;D:\PublicResource\vlc-3.0.16\sdk\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -134,7 +134,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -143,7 +143,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>inference_engine.lib;inference_engine_transformations.lib;inference_engine_c_api.lib;ngraph.lib;tbb.lib;hddlapi.lib;opencv_world412.lib;SPIRV.lib;GenericCodeGen.lib;glslang.lib;MachineIndependent.lib;ncnn.lib;OGLCompiler.lib;OSDependent.lib;VkLayer_utils.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>inference_engine.lib;inference_engine_transformations.lib;inference_engine_c_api.lib;ngraph.lib;tbb.lib;hddlapi.lib;opencv_world412.lib;SPIRV.lib;GenericCodeGen.lib;glslang.lib;MachineIndependent.lib;ncnn.lib;OGLCompiler.lib;OSDependent.lib;VkLayer_utils.lib;vulkan-1.lib;libvlc.lib;libvlccore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -152,6 +152,7 @@
     <ClCompile Include="nanodet_plus.cpp" />
     <ClCompile Include="ShipDetWithNcnnNanoDet.cpp" />
     <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp" />
+    <ClCompile Include="vlc_reader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="commonDef.h" />
@@ -159,6 +160,7 @@
     <ClInclude Include="json.h" />
     <ClInclude Include="nanodet_openvino.h" />
     <ClInclude Include="nanodet_plus.h" />
+    <ClInclude Include="vlc_reader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\PrivProjects\[2022.03.15] 闸门船舶检测\Delivery\v1.3_20220410_vino\Release\app_config.json" />

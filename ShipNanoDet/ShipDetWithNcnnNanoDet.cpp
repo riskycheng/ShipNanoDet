@@ -8,6 +8,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "commonDef.h"
+#include "vlc_reader.h"
 
 using namespace Json;
 using namespace std;
@@ -269,7 +270,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 	}
 	Mat tmpMat;
 	resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-	cv::imshow("shipDet v1.4_20220416_NCNN_CPU-GPU", tmpMat);
+	cv::imshow("shipDet v1.5_20220426_NCNN_CPU-GPU", tmpMat);
 	tmpMat.release();
 }
 
@@ -589,21 +590,30 @@ int main(int argc, char** argv)
 	printAppConfig(appConfig);
 
 	// parse the video file path
-	std::string videoFilePath = argv[2];
+	std::string videoFilePath = appConfig.sourceLocation;
 
 	NanoDet detector = NanoDet("./models/ncnnModel/nanoDetPlus_m_416_half.param", "./models/ncnnModel/nanoDetPlus_m_416_half.bin", &appConfig);
 	std::cout << "success to load the NCNN model" << std::endl;
 
 	cv::Mat image;
+	
+	// the offline video mode
 	cv::VideoCapture videoCap;
+
+	// the VLC for remote streaming mode
+	char* address = new char[200];
+	sprintf(address, "%s", videoFilePath.c_str());
+	int rtsp_w = 1920, rtsp_h = 1080;
+	vlc_reader vlcReader(address);
+	
 	switch (appConfig.sourceMode)
 	{
 	case 0: // the offline video mode
+	case 1: // the live local camera mode
 		videoCap.open(videoFilePath.c_str());
 		break;
-	case 1: // the live local camera mode
-		break;
 	case 2: // the remote RTSP stream
+		vlcReader.start(rtsp_w, rtsp_h);
 		break;
 	default:
 		break;
@@ -617,11 +627,12 @@ int main(int argc, char** argv)
 		switch (appConfig.sourceMode)
 		{
 		case 0: // the offline video mode
+		case 1: // the live local camera mode
 			videoCap.read(image);
 			break;
-		case 1: // the live local camera mode
-			break;
+
 		case 2: // the remote RTSP stream
+			image = vlcReader.frame();
 			break;
 		default:
 			break;

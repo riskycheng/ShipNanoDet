@@ -30,6 +30,9 @@
     <ClCompile Include="ShipDetWithNcnnNanoDet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vlc_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nanodet_openvino.h">
@@ -45,6 +48,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="commonDef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vlc_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
