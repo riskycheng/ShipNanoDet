@@ -1,0 +1,27 @@
+{
+  "?cameraID": "indicates the camera location, should be 4-digits interger",
+  "cameraID": 1234,
+
+  "?frameID": "frame indexer used for metrics&frame syncing, should be ascending interger",
+  "frameID": 10,
+
+  "?isIndanger": "indicates whether the current object is in dangerous status",
+  "isIndanger": false,
+
+  "?detectedObjs": "indicates the detected objs, each contains [x:int, y:int, width:int, height:int, conf:float]",
+  "detectedObjs": [
+    [ 100, 200, 500, 300, 0.55 ],
+    [ 200, 500, 350, 369, 0.68 ]
+  ],
+
+  "?dangerousRegion": "the predefined dangerous region contains 4 vertexs, left to right, top to bottom",
+  "dangerousRegion": [
+    [ 400, 0 ],
+    [ 600, 0 ],
+    [ 500, 1080 ],
+    [ 200, 1080 ]
+  ],
+
+  "?timeStamp": "the current timeStamp for this frame/event, should be in time format",
+  "timeStamp": "2022-04-22 16:56:34:893"
+}
