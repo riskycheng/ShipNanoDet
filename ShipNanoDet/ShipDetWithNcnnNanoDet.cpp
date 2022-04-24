@@ -578,9 +578,9 @@ FrameResult imageRun(int frameID, NanoDet& detector, Mat& image, AppConfig* appC
 
 int main(int argc, char** argv)
 {
-	if (argc != 3)
+	if (argc != 2)
 	{
-		printf_s("usage: shipDet.exe [config_file_path] [video_file_path] \n e.g., \n shipDet.exe config.json test.mp4");
+		printf_s("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
 		return -1;
 	}
 
@@ -613,6 +613,7 @@ int main(int argc, char** argv)
 		videoCap.open(videoFilePath.c_str());
 		break;
 	case 2: // the remote RTSP stream
+		printf("loading rtsp from:%s \n", appConfig.sourceLocation.c_str());
 		vlcReader.start(rtsp_w, rtsp_h);
 		break;
 	default:
@@ -641,7 +642,7 @@ int main(int argc, char** argv)
 		if (image.data == nullptr)
 		{
 			printf("end of video, exiting... \n");
-			break;
+			continue;
 		}
 
 		if (frameIndex % cycle != 0)
