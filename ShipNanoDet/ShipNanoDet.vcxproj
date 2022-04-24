@@ -163,6 +163,7 @@
   <ItemGroup>
     <None Include="..\..\..\..\PrivProjects\[2022.03.15] 闸门船舶检测\Delivery\v1.3_20220410_vino\Release\app_config.json" />
     <None Include="app_config.json" />
+    <None Include="frameResult.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

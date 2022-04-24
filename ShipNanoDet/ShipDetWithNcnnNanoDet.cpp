@@ -109,6 +109,10 @@ AppConfig parseConfig(const std::string jsonConfigPath) {
 	bool use_GPU = root["detector"]["use_GPU"].asBool();
 
 	// application related
+	// camera related
+	int cameraID = root["application"]["camera_related"]["cameraID"].asInt();
+	int sourceMode = root["application"]["camera_related"]["sourceMode"].asInt();
+	static string sourceLocation = root["application"]["camera_related"]["sourceLocation"].asString();
 	int x1 = root["application"]["dangerous_region"]["x1"].asInt();
 	int y1 = root["application"]["dangerous_region"]["y1"].asInt();
 	int x2 = root["application"]["dangerous_region"]["x2"].asInt();
@@ -147,6 +151,11 @@ AppConfig parseConfig(const std::string jsonConfigPath) {
 	appConfig.detect_cycle = detect_cycle;
 
 	appConfig.num_threads = num_threads;
+
+	// update the camera related fields
+	appConfig.cameraID = cameraID;
+	appConfig.sourceMode = sourceMode;
+	appConfig.sourceLocation = sourceLocation;
 
 	return appConfig;
 }
@@ -585,16 +594,38 @@ int main(int argc, char** argv)
 	NanoDet detector = NanoDet("./models/ncnnModel/nanoDetPlus_m_416_half.param", "./models/ncnnModel/nanoDetPlus_m_416_half.bin", &appConfig);
 	std::cout << "success to load the NCNN model" << std::endl;
 
-
 	cv::Mat image;
-	cv::VideoCapture cap(videoFilePath.c_str());
-	
+	cv::VideoCapture videoCap;
+	switch (appConfig.sourceMode)
+	{
+	case 0: // the offline video mode
+		videoCap.open(videoFilePath.c_str());
+		break;
+	case 1: // the live local camera mode
+		break;
+	case 2: // the remote RTSP stream
+		break;
+	default:
+		break;
+	}
+
 	int cycle = appConfig.detect_cycle;
 	FrameResult frameResult;
 	int frameIndex = 0;
 	while (true)
 	{
-		cap >> image;
+		switch (appConfig.sourceMode)
+		{
+		case 0: // the offline video mode
+			videoCap.read(image);
+			break;
+		case 1: // the live local camera mode
+			break;
+		case 2: // the remote RTSP stream
+			break;
+		default:
+			break;
+		}
 
 		if (image.data == nullptr)
 		{
@@ -619,6 +650,11 @@ int main(int argc, char** argv)
 		printFrameResult(frameResult);
 	}
 	image.release();
-	cap.release();
+	
+
+	if (videoCap.isOpened())
+	{
+		videoCap.release();
+	}
 	return 0;
 }

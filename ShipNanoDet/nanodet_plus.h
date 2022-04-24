@@ -9,6 +9,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <net.h>
+#include <string>
 #define NMS_THRESHOLD 0.5F
 struct AppConfig {
     // the input info, do not need to parse from json, just for external usage
@@ -42,6 +43,22 @@ struct AppConfig {
 
     // number of threads to use up of the available CPU cores
     int num_threads = 16;
+
+
+    // the cameraID indicating the camera location in interger format
+    int cameraID = 0;
+
+    // 0 for video, 1 for live camera, 2 for remote stream
+    int sourceMode = 0;
+
+    /*
+    summary: specifying the location according to the above source mode
+    note   :
+         if sourceMode == 0 for offline video file. e.g., then this field should be : c:/test/testVideo.mp4
+         if sourceMode == 1 for live local camera.  e.g., then this field should be : 0 / 1 / 2 / 3 etc. it depends on the location camera connection status
+         if sourceMode == 2 for remote IP camera.   e.g., then this field should be : rtsp://admin:abcd1234@182.49.1.11:554/Streaming/Channels/101
+    */
+    std::string sourceLocation;
 };
 
 typedef struct HeadInfo
