@@ -45,7 +45,7 @@ void vlc_reader::start(int wantW, int wantH)
 	libvlc_media_player_set_media(mp, media);
 	libvlc_media_release(media);
 
-	libvlc_video_set_format(mp, "RGBA", wantW, wantH, wantW * 4);//设置取流参数 以RGBA格式取流
+	libvlc_video_set_format(mp, "BGRA", wantW, wantH, wantW * 4);//设置取流参数 以RGBA格式取流
 	libvlc_media_player_play(mp);
 }
 
