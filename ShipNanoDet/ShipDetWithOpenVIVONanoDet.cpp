@@ -513,6 +513,20 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 
     FrameResult frameResult = FrameResult();
 
+    // get the current system time stamp
+    time_t timep;
+    struct tm* p;
+    time(&timep);
+    p = localtime(&timep);
+    //2021/5/11 14:04:44
+    char* timeStamp = new char[50];
+    sprintf(timeStamp, "%d/%d/%d %02d:%02d:%02d", 1900 + p->tm_year, 1 + p->tm_mon,
+        p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+    // assign it back to the frameResult struct
+    frameResult.timeStamp = timeStamp;
+    delete[] timeStamp;
+
+
     clock_t start, end;
     double cost;
     int frameIndex = 0;
@@ -675,6 +689,11 @@ int main(int argc, char** argv)
         frameIndex++;
         // print out metrics
         printFrameResult_(frameResult);
+        // print out the json metrics
+        //string jsonStr = generateJsonResult(frameResult);
+        //printf("Json result >>> \n");
+        //printf("%s\n", jsonStr.c_str());
+        //printf("Json result <<< \n");
     }
 
     if (videoCap.isOpened())

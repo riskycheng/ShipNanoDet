@@ -10,16 +10,40 @@
 
   "?detectedObjs": "indicates the detected objs, each contains [x:int, y:int, width:int, height:int, conf:float]",
   "detectedObjs": [
-    [ 100, 200, 500, 300, 0.55 ],
-    [ 200, 500, 350, 369, 0.68 ]
+    {
+      "x": 100,
+      "y": 200,
+      "width": 500,
+      "height": 300,
+      "conf": 0.68
+    },
+    {
+      "x": 200,
+      "y": 300,
+      "width": 500,
+      "height": 300,
+      "conf": 0.78
+    }
   ],
 
   "?dangerousRegion": "the predefined dangerous region contains 4 vertexs, left to right, top to bottom",
   "dangerousRegion": [
-    [ 400, 0 ],
-    [ 600, 0 ],
-    [ 500, 1080 ],
-    [ 200, 1080 ]
+    {
+      "x": 500,
+      "y": 0
+    },
+    {
+      "x": 700,
+      "y": 0
+    },
+    {
+      "x": 300,
+      "y": 1080
+    },
+    {
+      "x": 100,
+      "y": 1080
+    }
   ],
 
   "?timeStamp": "the current timeStamp for this frame/event, should be in time format",
