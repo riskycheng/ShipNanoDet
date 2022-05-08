@@ -354,8 +354,8 @@ int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_re
     int h = src.rows;
     int dst_w = dst_size.width;
     int dst_h = dst_size.height;
-    //std::cout << "src: (" << h << ", " << w << ")" << std::endl;
-    dst = cv::Mat(cv::Size(dst_w, dst_h), CV_8UC3, cv::Scalar(0));
+    // std::cout << "src: (" << h << ", " << w << ")" << std::endl;
+    dst = cv::Mat(cv::Size(dst_w, dst_h), src.channels() == 3 ? CV_8UC3 : CV_8UC4, cv::Scalar(0));
 
     float ratio_src = w * 1.0 / h;
     float ratio_dst = dst_w * 1.0 / dst_h;
@@ -406,8 +406,6 @@ int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_re
     else {
         printf("error\n");
     }
-    //cv::imshow("dst", dst);
-    //cv::waitKey(0);
     return 0;
 }
 
@@ -539,17 +537,18 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         cv::Mat resized_img;
         start = clock();
 
-        char* imageName = new char[200];
-        sprintf(imageName, "./tmp_images/%04d.jpg", frameID);
-        imwrite(imageName, image);
-        delete[] imageName;
-
         resize_uniform_VINO(image, resized_img, cv::Size(width, height), effect_roi);
+
+        //char* imageName = new char[200];
+        //sprintf(imageName, "./tmp_images/%04d.jpg", frameID);
+        //imwrite(imageName, resized_img);
+        //delete[] imageName;
+
         results = detector.detect(resized_img);
-       
         end = clock();
         cost = difftime(end, start);
-        touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+        if (!results.empty())
+            touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
         printf("inference video with OpenVINO cost: %.2f ms \n", cost);
         draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
         cv::waitKey(1);
@@ -618,6 +617,9 @@ int main(int argc, char** argv)
         printf("loading rtsp from:%s \n", appConfig.sourceLocation.c_str());
         vlcReader.start(rtsp_w, rtsp_h);
         break;
+    case 3: // the still image mode, it is mainly used for debugging
+        printf("loading image from:%s \n", appConfig.sourceLocation.c_str());
+        break;
     default:
         break;
     }
@@ -636,8 +638,18 @@ int main(int argc, char** argv)
             break;
 
         case 2: // the remote RTSP stream
-            image = vlcReader.frame();
+            image = vlcReader.frame().clone();
+            if (image.channels() == 4)
+                cvtColor(image, image, COLOR_RGBA2RGB);
+            else
+            {
+                printf("the remote rtsp frame not ready...\n");
+                continue;
+            }
+
             break;
+        case 3:
+            image = imread(appConfig.sourceLocation.c_str());
         default:
             break;
         }
@@ -664,12 +676,18 @@ int main(int argc, char** argv)
         // print out metrics
         printFrameResult_(frameResult);
     }
-    image.release();
 
     if (videoCap.isOpened())
     {
         videoCap.release();
     }
 
+    if (appConfig.sourceMode == 3)
+    {
+        // indicate it is image mode
+        waitKey();
+    }
+
+    image.release();
     return 0;
 }
