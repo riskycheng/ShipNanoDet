@@ -301,7 +301,9 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
 
     int detect_cycle = root["application"]["detect_cycle"].asInt();
 
-    int num_threads = root["applicati on"]["num_threads"].asInt();
+    int num_threads = root["application"]["num_threads"].asInt();
+
+    static string remoteURL = root["application"]["remote_url"].asString();
 
 
     // start updating for these fields
@@ -328,6 +330,8 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
     appConfig.cameraID = cameraID;
     appConfig.sourceMode = sourceMode;
     appConfig.sourceLocation = sourceLocation;
+
+    appConfig.remoteUrl = remoteURL;
 
     return appConfig;
 }
@@ -407,6 +411,7 @@ int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_re
     else {
         printf("error\n");
     }
+    tmp.release();
     return 0;
 }
 
@@ -438,8 +443,8 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
         cv::rectangle(image, cv::Rect(cv::Point((bbox.x1 - effect_roi.x) * width_ratio, (bbox.y1 - effect_roi.y) * height_ratio),
             cv::Point((bbox.x2 - effect_roi.x) * width_ratio, (bbox.y2 - effect_roi.y) * height_ratio)), cv::Scalar(0, 250, 0), 2);
 
-        char text[256];
-        sprintf_s(text, "%s %.1f%%", class_names[bbox.label], bbox.score * 100);
+        char* text = new char[50];
+        sprintf(text, "%s %.1f%%", class_names[bbox.label], bbox.score * 100);
 
         int baseLine = 0;
         cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
@@ -456,6 +461,8 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 
         cv::putText(image, text, cv::Point(x, y + label_size.height),
             cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255));
+
+        delete[] text;
     }
 
     // render the dangerous region
@@ -499,10 +506,10 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
         cv::putText(image, warningTxt, cv::Point(text_x, text_y),
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
-    Mat tmpMat;
-    resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.5_20220508_openVINO", tmpMat);
-    tmpMat.release();
+    resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
+    cv::imshow("shipDet v1.5_20220508_openVINO", image);
+    cv::waitKey(1);
+    image.release();
 }
 
 FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_* appConfig, bool skip) {
@@ -695,10 +702,7 @@ int main(int argc, char** argv)
         printFrameResult_(frameResult);
         // print out the json metrics
         string jsonStr = generateJsonResult(frameResult);
-        printf("Json result >>> \n");
-        printf("%s\n", jsonStr.c_str());
-        printf("Json result <<< \n");
-        sendOutMetrics(CAM_URL, jsonStr);
+        sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
     }
 
     if (videoCap.isOpened())

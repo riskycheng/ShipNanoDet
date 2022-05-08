@@ -58,6 +58,9 @@ struct  AppConfig_ {
          if sourceMode == 2 for remote IP camera.   e.g., then this field should be : rtsp://admin:abcd1234@182.49.1.11:554/Streaming/Channels/101
     */
     std::string sourceLocation;
+
+    // the remote URL for sending out metrics
+    std::string remoteUrl;
 };
 
 struct object_rect_ {
