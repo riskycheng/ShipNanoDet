@@ -270,7 +270,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
 	}
 	Mat tmpMat;
 	resize(image, tmpMat, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-	cv::imshow("shipDet v1.5_20220426_NCNN_CPU-GPU", tmpMat);
+	cv::imshow("shipDet v1.5_20220508_NCNN_CPU-GPU", tmpMat);
 	tmpMat.release();
 }
 
