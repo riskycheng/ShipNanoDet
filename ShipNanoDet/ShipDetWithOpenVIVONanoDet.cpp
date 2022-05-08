@@ -9,6 +9,7 @@
 #include "commonDef.h"
 #include "vlc_reader.h"
 
+#define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
 using namespace cv;
@@ -526,6 +527,9 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
     frameResult.timeStamp = timeStamp;
     delete[] timeStamp;
 
+    // update the cameraID
+    frameResult.cameraID = appConfig->cameraID;
+
 
     clock_t start, end;
     double cost;
@@ -690,10 +694,11 @@ int main(int argc, char** argv)
         // print out metrics
         printFrameResult_(frameResult);
         // print out the json metrics
-        //string jsonStr = generateJsonResult(frameResult);
-        //printf("Json result >>> \n");
-        //printf("%s\n", jsonStr.c_str());
-        //printf("Json result <<< \n");
+        string jsonStr = generateJsonResult(frameResult);
+        printf("Json result >>> \n");
+        printf("%s\n", jsonStr.c_str());
+        printf("Json result <<< \n");
+        sendOutMetrics(CAM_URL, jsonStr);
     }
 
     if (videoCap.isOpened())

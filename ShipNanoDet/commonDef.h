@@ -1,6 +1,17 @@
 #pragma once
 #include <mat.h>
+#include "curl/curl.h"
+
 using namespace std;
+
+
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "wldap32.lib")
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "wldap32.lib")
+#pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "Normaliz.lib")
 struct ShipBox {
 	int x = 0;
 	int y = 0;
@@ -73,4 +84,27 @@ string generateJsonResult(FrameResult frameResult)
 	jsonResult = root.toStyledString();
 
 	return jsonResult;
+}
+
+bool sendOutMetrics(const char* url, const string jsonData) 
+{
+	bool ret = false;
+	CURL* curl;
+	CURLcode res;
+	curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+		curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
+		struct curl_slist* headers = NULL;
+		headers = curl_slist_append(headers, "Content-Type: application/json");
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+		const char* data = jsonData.c_str();
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+		res = curl_easy_perform(curl);
+	}
+	curl_easy_cleanup(curl);
+	printf("\ncalling sendOutMetrics finished with code:%d\n", res);
+	return ret;
 }
