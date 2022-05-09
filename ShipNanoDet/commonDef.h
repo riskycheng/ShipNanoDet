@@ -50,7 +50,7 @@ string generateJsonResult(FrameResult frameResult)
 	root["isIndanger"] = frameResult.isInDanger;
 
 	// root: detectedObjs
-	Json::Value detectedObjs;
+	Json::Value detectedObjs = Json::arrayValue;
 	// root->detectedObjs: jsonArray
 	for (auto box : frameResult.boxes)
 	{

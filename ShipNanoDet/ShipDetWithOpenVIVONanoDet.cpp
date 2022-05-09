@@ -537,6 +537,15 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
     // update the cameraID
     frameResult.cameraID = appConfig->cameraID;
 
+    // update the dangerous region
+    frameResult.dangerousRegion[0] = appConfig->x1;
+    frameResult.dangerousRegion[1] = appConfig->y1;
+    frameResult.dangerousRegion[2] = appConfig->x2;
+    frameResult.dangerousRegion[3] = appConfig->y2;
+    frameResult.dangerousRegion[4] = appConfig->x3;
+    frameResult.dangerousRegion[5] = appConfig->y3;
+    frameResult.dangerousRegion[6] = appConfig->x4;
+    frameResult.dangerousRegion[7] = appConfig->y4;
 
     clock_t start, end;
     double cost;
@@ -702,6 +711,7 @@ int main(int argc, char** argv)
         printFrameResult_(frameResult);
         // print out the json metrics
         string jsonStr = generateJsonResult(frameResult);
+        printf("\n ***** jsonStr ****** \n %s \n***** jsonStr ****** \n", jsonStr.c_str());
         sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
     }
 
