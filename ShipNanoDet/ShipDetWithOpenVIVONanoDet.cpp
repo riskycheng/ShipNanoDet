@@ -507,7 +507,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
     resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.5_20220508_openVINO", image);
+    cv::imshow("shipDet v1.6_20220519_openVINO", image);
     cv::waitKey(1);
     image.release();
 }
