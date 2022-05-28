@@ -103,7 +103,7 @@ typedef struct BoxInfo
 class NanoDetVINO
 {
 public:
-    NanoDetVINO(const char* param, AppConfig_* appConfig);
+    NanoDetVINO(const char* param, AppConfig_* appConfig, bool &res);
 
     ~NanoDetVINO();
 

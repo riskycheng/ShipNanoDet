@@ -521,7 +521,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
     resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.7_20220527_openVINO", image);
+    cv::imshow("shipDet v1.7_20220528_openVINO", image);
     cv::waitKey(1);
     image.release();
 }
@@ -707,8 +707,18 @@ int main(int argc, char** argv)
     std::string videoFilePath = mAppConfig.sourceLocation;
 
     // model path
-    auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &mAppConfig);
-    std::cout << "success to load the openVINO model" << std::endl;
+    bool modelInit = false;
+    auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &mAppConfig, modelInit);
+    
+    if (modelInit)
+    {
+        printf("openVINO model initialized successfully! \n");
+    }
+    else
+    {
+        printf("openVINO model initialized failed, exiting... \n");
+        return -1;
+    }
 
 
     // the offline video mode

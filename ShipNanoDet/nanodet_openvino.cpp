@@ -56,14 +56,24 @@ static void generate_grid_center_priors(const int input_height, const int input_
     }
 }
 
-NanoDetVINO::NanoDetVINO(const char* model_path, AppConfig_* appConfig)
+NanoDetVINO::NanoDetVINO(const char* model_path, AppConfig_* appConfig, bool &res)
 {
     printf("start initializing NanoDetVINO instance ...\n");
     // cache the appConfig
     memcpy(&mAppConfig, appConfig, sizeof(AppConfig_));
 
     InferenceEngine::Core ie;
-    InferenceEngine::CNNNetwork model = ie.ReadNetwork(model_path);
+    InferenceEngine::CNNNetwork model;
+    try {
+        model = ie.ReadNetwork(model_path);
+    }
+    catch (const std::exception& e)
+    {
+        printf("[error] failed to create openVINO model, check local env and model...\n");
+        res = false;
+        return;
+    }
+
     // prepare input settings
     InferenceEngine::InputsDataMap inputs_map(model.getInputsInfo());
     input_name_ = inputs_map.begin()->first;
@@ -84,7 +94,7 @@ NanoDetVINO::NanoDetVINO(const char* model_path, AppConfig_* appConfig)
     //get network
     network_ = ie.LoadNetwork(model, "CPU");
     infer_request_ = network_.CreateInferRequest();
-
+    res = true;
 }
 
 NanoDetVINO::~NanoDetVINO()
