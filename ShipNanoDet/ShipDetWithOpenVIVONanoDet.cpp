@@ -10,6 +10,7 @@
 #include "vlc_reader.h"
 
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
+static string REMOTE_SERVICE_ADDR = "";
 using namespace Json;
 using namespace std;
 using namespace cv;
@@ -507,7 +508,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
     resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.6_20220519_openVINO", image);
+    cv::imshow("shipDet v1.7_20220527_openVINO", image);
     cv::waitKey(1);
     image.release();
 }
@@ -606,7 +607,30 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
     return frameResult;
 }
 
+vector<FrameResult> mFrameResutsCached;
+bool mSendOutThreadRun = true;
+void sendOutMetricsThread() {
+    
+    while (mSendOutThreadRun)
+    {
+        // check the queue every 5ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        if (!mFrameResutsCached.empty())
+        {
+            auto item = mFrameResutsCached[0];
+            // print out the json metrics
+            string jsonStr = generateJsonResult(item);
+            //sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
+            sendOutMetrics_Simulation(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
 
+            // remove the first one 
+            mFrameResutsCached.erase(mFrameResutsCached.begin());
+        }
+        else {
+            printf("no valid result in the queue pool yet \n");
+        }
+    }
+}
 
 int main(int argc, char** argv)
 {
@@ -623,6 +647,7 @@ int main(int argc, char** argv)
     auto appConfig = parseConfig(jsonFilePath);
     printAppConfig(appConfig);
 
+    REMOTE_SERVICE_ADDR = appConfig.remoteUrl;
     // parse the video file path
     std::string videoFilePath = appConfig.sourceLocation;
 
@@ -657,6 +682,8 @@ int main(int argc, char** argv)
     default:
         break;
     }
+
+    thread rst = thread(sendOutMetricsThread);
 
     int cycle = appConfig.detect_cycle;
     FrameResult frameResult;
@@ -709,10 +736,11 @@ int main(int argc, char** argv)
         frameIndex++;
         // print out metrics
         printFrameResult_(frameResult);
-        // print out the json metrics
-        string jsonStr = generateJsonResult(frameResult);
-        printf("\n ***** jsonStr ****** \n %s \n***** jsonStr ****** \n", jsonStr.c_str());
-        sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
+
+        // sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
+        //std::thread threadAction(sendOutMetrics, appConfig.remoteUrl.c_str(), jsonStr);
+        // keep adding to the global queue
+        mFrameResutsCached.emplace_back(frameResult);
     }
 
     if (videoCap.isOpened())

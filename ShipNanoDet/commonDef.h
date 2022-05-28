@@ -1,5 +1,6 @@
 #pragma once
 #include <mat.h>
+#include <thread>
 #include "curl/curl.h"
 
 using namespace std;
@@ -88,6 +89,7 @@ string generateJsonResult(FrameResult frameResult)
 
 bool sendOutMetrics(const char* url, const string jsonData) 
 {
+	printf("starting sendOutMetrics\n");
 	bool ret = false;
 	CURL* curl;
 	CURLcode res;
@@ -107,4 +109,13 @@ bool sendOutMetrics(const char* url, const string jsonData)
 	curl_easy_cleanup(curl);
 	printf("\ncalling sendOutMetrics finished with code:%d\n", res);
 	return ret;
+}
+
+bool sendOutMetrics_Simulation(const char* url, const string jsonData)
+{
+	printf("simulation on the sendingOut metrics started\n");
+	printf("processing...\n %s \n", jsonData.c_str());
+	Sleep(200);
+	printf("simulation on the sendingOut metrics finished\n");
+	return true;
 }
