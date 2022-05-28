@@ -87,28 +87,26 @@ string generateJsonResult(FrameResult frameResult)
 	return jsonResult;
 }
 
-bool sendOutMetrics(const char* url, const string jsonData) 
+CURLcode sendOutMetrics(const char* url, const string jsonData)
 {
-	printf("starting sendOutMetrics\n");
-	bool ret = false;
 	CURL* curl;
-	CURLcode res;
+	CURLcode eRet = CURLcode::CURLE_OK;
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_easy_setopt(curl, CURLOPT_URL, url);
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 		curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 500); // timeout is only 500ms
 		struct curl_slist* headers = NULL;
 		headers = curl_slist_append(headers, "Content-Type: application/json");
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 		const char* data = jsonData.c_str();
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
-		res = curl_easy_perform(curl);
+		eRet = curl_easy_perform(curl);
 	}
 	curl_easy_cleanup(curl);
-	printf("\ncalling sendOutMetrics finished with code:%d\n", res);
-	return ret;
+	return eRet;
 }
 
 bool sendOutMetrics_Simulation(const char* url, const string jsonData)

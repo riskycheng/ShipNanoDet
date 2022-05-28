@@ -18,6 +18,7 @@ static AppConfig_ mAppConfig;
 void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
 void printFrameResult_(FrameResult result) {
+    if (!mAppConfig.enable_debugging_log) return;
     printf("******************** FrameResult *********************\n");
     printf("frameID:%d\n", result.frameID);
     printf("In Danger:%s\n", result.isInDanger ? "true" : "false");
@@ -308,6 +309,10 @@ void parseConfig(const std::string jsonConfigPath) {
 
     int local_metrics_sending_queue_length = root["application"]["local_metrics_sending_queue_length"].asInt();
 
+    bool enable_debugging_log = root["application"]["enable_debugging_log"].asBool();
+
+    bool enable_metrics_sendingOut = root["application"]["enable_metrics_sendingOut"].asBool();
+
     // start updating for these fields
     mAppConfig.det_conf_thresh = det_conf_thresh;
     mAppConfig.x1 = x1;
@@ -334,7 +339,11 @@ void parseConfig(const std::string jsonConfigPath) {
 
     mAppConfig.remoteUrl = remoteURL;
 
+    mAppConfig.enable_debugging_log = enable_debugging_log;
+
     mAppConfig.local_metrics_sending_queue_length = local_metrics_sending_queue_length;
+
+    mAppConfig.enable_metrics_sendingOut = enable_metrics_sendingOut;
 }
 
 
@@ -351,8 +360,10 @@ void printAppConfig(const AppConfig_& appConfig) {
     printf("\t min_continousOverlapCount:%d\n", appConfig.min_continousOverlapCount);
     printf("\t detect_cycle:%d\n", appConfig.detect_cycle);
     printf("\t num_threads:%d\n", appConfig.num_threads);
-    printf("\t remoteUrl:%s\n", appConfig.remoteUrl);
+    printf("\t remoteUrl:%s\n", appConfig.remoteUrl.c_str());
     printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
+    printf("\t enable_debugging_log:%s\n", appConfig.enable_debugging_log ? "true" : "false");
+    printf("\t enable_metrics_sendingOut:%s\n", appConfig.enable_metrics_sendingOut ? "true" : "false");
     printf("******************** AppConfig *********************\n");
 }
 
@@ -412,7 +423,7 @@ int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_re
         effect_area.height = tmp_h;
     }
     else {
-        printf("error\n");
+        printf("error in resize_uniform_VINO\n");
     }
     tmp.release();
     return 0;
@@ -558,8 +569,9 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
     bool touchedWarning = false;
     if (skip)
     {
-        // not inference, use the previous one
-        printf("use the previous inferred result...\n");
+        if (mAppConfig.enable_debugging_log)
+            // not inference, use the previous one
+            printf("use the previous inferred result...\n");
         touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
         draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
         cv::waitKey(30);
@@ -586,7 +598,8 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         cost = difftime(end, start);
         if (!results.empty())
             touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-        printf("inference video with OpenVINO cost: %.2f ms \n", cost);
+        if (mAppConfig.enable_debugging_log)
+            printf("inference video with OpenVINO cost: %.2f ms \n", cost);
         draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
         cv::waitKey(1);
         resized_img.release();
@@ -619,7 +632,8 @@ void sendOutMetricsThread() {
         if (mFrameResutsCached.size() > mAppConfig.local_metrics_sending_queue_length)
         {
             mFrameResutsCached.clear();
-            printf("current local metrics queue cleared up to avoid lantency > %d \n", mAppConfig.local_metrics_sending_queue_length);
+            if (mAppConfig.enable_debugging_log)
+                printf("current local metrics queue cleared up to avoid lantency > %d \n", mAppConfig.local_metrics_sending_queue_length);
         }
         
 
@@ -631,13 +645,45 @@ void sendOutMetricsThread() {
             // print out the json metrics
             string jsonStr = generateJsonResult(item);
             //sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
-            sendOutMetrics_Simulation(mAppConfig.remoteUrl.c_str(), jsonStr);
-
+            if (mAppConfig.enable_debugging_log)
+                printf("start sending out frameResult...\n");
+            auto eRet = sendOutMetrics(mAppConfig.remoteUrl.c_str(), jsonStr);
+            if (eRet == CURLE_FAILED_INIT)
+            {
+                printf("[error] failed to init the Curl interface...\n");
+            }
+            else if (eRet == CURLE_COULDNT_RESOLVE_PROXY || eRet == CURLE_COULDNT_RESOLVE_HOST)
+            {
+                printf("[error] cannot resolve the host, ensure the host address is correct...\n");
+            }
+            else if (eRet == CURLE_COULDNT_CONNECT)
+            {
+                printf("[error] cannot connect to remote serive, ensure it started properly...\n");
+            }
+            else if (eRet == CURLE_OK)
+            {
+                if (mAppConfig.enable_debugging_log)
+                {
+                    if (mAppConfig.enable_metrics_sendingOut)
+                        printf("[success] remote API calling succeeds...\n");
+                    else
+                        printf("[warning] remote API was not enabled...\n");
+                } 
+            }
+            else if (eRet == CURLE_OPERATION_TIMEDOUT)
+            {
+                printf("[error] timeOut to send out the metrics...\n");
+            }
+            else
+            {
+                printf("[error] failed to send out metrics due to %s...\n", eRet);
+            }
             // remove the first one 
             mFrameResutsCached.erase(mFrameResutsCached.begin());
         }
         else {
-            printf("no valid result in the queue pool yet \n");
+            if (mAppConfig.enable_debugging_log)
+                printf("no valid result in the queue pool yet \n");
         }
     }
 }
@@ -646,7 +692,7 @@ int main(int argc, char** argv)
 {
     if (argc != 2)
     {
-        printf_s("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
+        printf("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
         return -1;
     }
     std::cout << "start init model with openVINO..." << std::endl;
@@ -682,11 +728,13 @@ int main(int argc, char** argv)
         videoCap.open(videoFilePath.c_str());
         break;
     case 2: // the remote RTSP stream
-        printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
+        if (mAppConfig.enable_debugging_log)
+            printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
         vlcReader.start(rtsp_w, rtsp_h);
         break;
     case 3: // the still image mode, it is mainly used for debugging
-        printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
+        if (mAppConfig.enable_debugging_log)
+            printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
         break;
     default:
         break;
@@ -726,7 +774,7 @@ int main(int argc, char** argv)
 
         if (image.data == nullptr)
         {
-            printf("end of video, exiting... \n");
+            printf("no valid frame, wait for next... \n");
             continue;
         }
 

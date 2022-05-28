@@ -63,6 +63,10 @@ struct  AppConfig_ {
     std::string remoteUrl;
 
     int local_metrics_sending_queue_length = 1000;
+
+    bool enable_debugging_log = true;
+
+    bool enable_metrics_sendingOut = true;
 };
 
 struct object_rect_ {
