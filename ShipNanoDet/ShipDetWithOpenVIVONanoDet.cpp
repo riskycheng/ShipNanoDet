@@ -10,11 +10,11 @@
 #include "vlc_reader.h"
 
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
-static string REMOTE_SERVICE_ADDR = "";
 using namespace Json;
 using namespace std;
 using namespace cv;
 
+static AppConfig_ mAppConfig;
 void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
 void printFrameResult_(FrameResult result) {
@@ -271,7 +271,7 @@ bool touchWarningLines(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rec
     return touched;
 }
 
-AppConfig_ parseConfig(const std::string jsonConfigPath) {
+void parseConfig(const std::string jsonConfigPath) {
     std::ifstream file_input(jsonConfigPath.c_str());
     Json::Reader reader;
     Json::Value root;
@@ -306,35 +306,35 @@ AppConfig_ parseConfig(const std::string jsonConfigPath) {
 
     static string remoteURL = root["application"]["remote_url"].asString();
 
+    int local_metrics_sending_queue_length = root["application"]["local_metrics_sending_queue_length"].asInt();
 
     // start updating for these fields
-    AppConfig_ appConfig = AppConfig_();
-    appConfig.det_conf_thresh = det_conf_thresh;
-    appConfig.x1 = x1;
-    appConfig.y1 = y1;
-    appConfig.x2 = x2;
-    appConfig.y2 = y2;
-    appConfig.x3 = x3;
-    appConfig.y3 = y3;
-    appConfig.x4 = x4;
-    appConfig.y4 = y4;
+    mAppConfig.det_conf_thresh = det_conf_thresh;
+    mAppConfig.x1 = x1;
+    mAppConfig.y1 = y1;
+    mAppConfig.x2 = x2;
+    mAppConfig.y2 = y2;
+    mAppConfig.x3 = x3;
+    mAppConfig.y3 = y3;
+    mAppConfig.x4 = x4;
+    mAppConfig.y4 = y4;
 
-    appConfig.thresh_overlap_px = thresh_overlap_px;
+    mAppConfig.thresh_overlap_px = thresh_overlap_px;
 
-    appConfig.min_continousOverlapCount = min_continousOverlapCount;
+    mAppConfig.min_continousOverlapCount = min_continousOverlapCount;
 
-    appConfig.detect_cycle = detect_cycle;
+    mAppConfig.detect_cycle = detect_cycle;
 
-    appConfig.num_threads = num_threads;
+    mAppConfig.num_threads = num_threads;
 
     // update the camera related fields
-    appConfig.cameraID = cameraID;
-    appConfig.sourceMode = sourceMode;
-    appConfig.sourceLocation = sourceLocation;
+    mAppConfig.cameraID = cameraID;
+    mAppConfig.sourceMode = sourceMode;
+    mAppConfig.sourceLocation = sourceLocation;
 
-    appConfig.remoteUrl = remoteURL;
+    mAppConfig.remoteUrl = remoteURL;
 
-    return appConfig;
+    mAppConfig.local_metrics_sending_queue_length = local_metrics_sending_queue_length;
 }
 
 
@@ -351,6 +351,8 @@ void printAppConfig(const AppConfig_& appConfig) {
     printf("\t min_continousOverlapCount:%d\n", appConfig.min_continousOverlapCount);
     printf("\t detect_cycle:%d\n", appConfig.detect_cycle);
     printf("\t num_threads:%d\n", appConfig.num_threads);
+    printf("\t remoteUrl:%s\n", appConfig.remoteUrl);
+    printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
     printf("******************** AppConfig *********************\n");
 }
 
@@ -613,6 +615,14 @@ void sendOutMetricsThread() {
     
     while (mSendOutThreadRun)
     {
+        // if the cached queue is too long, need to clear it up to avoid latency
+        if (mFrameResutsCached.size() > mAppConfig.local_metrics_sending_queue_length)
+        {
+            mFrameResutsCached.clear();
+            printf("current local metrics queue cleared up to avoid lantency > %d \n", mAppConfig.local_metrics_sending_queue_length);
+        }
+        
+
         // check the queue every 5ms
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         if (!mFrameResutsCached.empty())
@@ -621,7 +631,7 @@ void sendOutMetricsThread() {
             // print out the json metrics
             string jsonStr = generateJsonResult(item);
             //sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
-            sendOutMetrics_Simulation(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
+            sendOutMetrics_Simulation(mAppConfig.remoteUrl.c_str(), jsonStr);
 
             // remove the first one 
             mFrameResutsCached.erase(mFrameResutsCached.begin());
@@ -644,15 +654,14 @@ int main(int argc, char** argv)
 
     // parse the json for initialization
     std::string jsonFilePath = argv[1];
-    auto appConfig = parseConfig(jsonFilePath);
-    printAppConfig(appConfig);
+    parseConfig(jsonFilePath);
+    printAppConfig(mAppConfig);
 
-    REMOTE_SERVICE_ADDR = appConfig.remoteUrl;
     // parse the video file path
-    std::string videoFilePath = appConfig.sourceLocation;
+    std::string videoFilePath = mAppConfig.sourceLocation;
 
     // model path
-    auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &appConfig);
+    auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &mAppConfig);
     std::cout << "success to load the openVINO model" << std::endl;
 
 
@@ -666,18 +675,18 @@ int main(int argc, char** argv)
     vlc_reader vlcReader(address);
 
 
-    switch (appConfig.sourceMode)
+    switch (mAppConfig.sourceMode)
     {
     case 0: // the offline video mode
     case 1: // the live local camera mode
         videoCap.open(videoFilePath.c_str());
         break;
     case 2: // the remote RTSP stream
-        printf("loading rtsp from:%s \n", appConfig.sourceLocation.c_str());
+        printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
         vlcReader.start(rtsp_w, rtsp_h);
         break;
     case 3: // the still image mode, it is mainly used for debugging
-        printf("loading image from:%s \n", appConfig.sourceLocation.c_str());
+        printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
         break;
     default:
         break;
@@ -685,13 +694,13 @@ int main(int argc, char** argv)
 
     thread rst = thread(sendOutMetricsThread);
 
-    int cycle = appConfig.detect_cycle;
+    int cycle = mAppConfig.detect_cycle;
     FrameResult frameResult;
     cv::Mat image;
     int frameIndex = 0;
     while (true)
     {
-        switch (appConfig.sourceMode)
+        switch (mAppConfig.sourceMode)
         {
         case 0: // the offline video mode
         case 1: // the live local camera mode
@@ -710,7 +719,7 @@ int main(int argc, char** argv)
 
             break;
         case 3:
-            image = imread(appConfig.sourceLocation.c_str());
+            image = imread(mAppConfig.sourceLocation.c_str());
         default:
             break;
         }
@@ -724,13 +733,13 @@ int main(int argc, char** argv)
         if (frameIndex % cycle != 0)
         {
             // not inference, use the previous one
-            frameResult = imageRun(frameIndex, detector, image, &appConfig, true);
+            frameResult = imageRun(frameIndex, detector, image, &mAppConfig, true);
             cv::waitKey(30);
         }
         else
         {
             // do the inference
-            frameResult = imageRun(frameIndex, detector, image, &appConfig, false);
+            frameResult = imageRun(frameIndex, detector, image, &mAppConfig, false);
         }
 
         frameIndex++;
@@ -748,7 +757,7 @@ int main(int argc, char** argv)
         videoCap.release();
     }
 
-    if (appConfig.sourceMode == 3)
+    if (mAppConfig.sourceMode == 3)
     {
         // indicate it is image mode
         waitKey();
