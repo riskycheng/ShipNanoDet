@@ -311,7 +311,7 @@ void parseConfig(const std::string jsonConfigPath) {
 
     bool enable_debugging_log = root["application"]["enable_debugging_log"].asBool();
 
-    bool enable_metrics_sendingOut = root["application"]["enable_metrics_sendingOut"].asBool();
+    int timeout_for_sending_metrics_ms = root["application"]["timeout_for_sending_metrics_ms"].asInt();
 
     // start updating for these fields
     mAppConfig.det_conf_thresh = det_conf_thresh;
@@ -343,7 +343,7 @@ void parseConfig(const std::string jsonConfigPath) {
 
     mAppConfig.local_metrics_sending_queue_length = local_metrics_sending_queue_length;
 
-    mAppConfig.enable_metrics_sendingOut = enable_metrics_sendingOut;
+    mAppConfig.timeout_for_sending_metrics_ms = timeout_for_sending_metrics_ms;
 }
 
 
@@ -363,7 +363,7 @@ void printAppConfig(const AppConfig_& appConfig) {
     printf("\t remoteUrl:%s\n", appConfig.remoteUrl.c_str());
     printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
     printf("\t enable_debugging_log:%s\n", appConfig.enable_debugging_log ? "true" : "false");
-    printf("\t enable_metrics_sendingOut:%s\n", appConfig.enable_metrics_sendingOut ? "true" : "false");
+    printf("\t timeout_for_sending_metrics_ms:%d\n", appConfig.timeout_for_sending_metrics_ms);
     printf("******************** AppConfig *********************\n");
 }
 
@@ -647,7 +647,10 @@ void sendOutMetricsThread() {
             //sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
             if (mAppConfig.enable_debugging_log)
                 printf("start sending out frameResult...\n");
-            auto eRet = sendOutMetrics(mAppConfig.remoteUrl.c_str(), jsonStr);
+
+
+            auto eRet = sendOutMetrics(mAppConfig, jsonStr);
+  
             if (eRet == CURLE_FAILED_INIT)
             {
                 printf("[error] failed to init the Curl interface...\n");
@@ -664,15 +667,12 @@ void sendOutMetricsThread() {
             {
                 if (mAppConfig.enable_debugging_log)
                 {
-                    if (mAppConfig.enable_metrics_sendingOut)
-                        printf("[success] remote API calling succeeds...\n");
-                    else
-                        printf("[warning] remote API was not enabled...\n");
+                    printf("[success] remote API calling succeeds...\n");
                 } 
             }
             else if (eRet == CURLE_OPERATION_TIMEDOUT)
             {
-                printf("[error] timeOut to send out the metrics...\n");
+                printf("[error] timeOut sending out metrics to %s...\n", mAppConfig.remoteUrl.c_str());
             }
             else
             {

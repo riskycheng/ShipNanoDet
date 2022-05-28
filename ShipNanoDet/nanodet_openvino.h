@@ -66,7 +66,7 @@ struct  AppConfig_ {
 
     bool enable_debugging_log = true;
 
-    bool enable_metrics_sendingOut = true;
+    int timeout_for_sending_metrics_ms = 500;
 };
 
 struct object_rect_ {

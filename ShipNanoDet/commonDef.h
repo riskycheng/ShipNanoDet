@@ -87,17 +87,17 @@ string generateJsonResult(FrameResult frameResult)
 	return jsonResult;
 }
 
-CURLcode sendOutMetrics(const char* url, const string jsonData)
+CURLcode sendOutMetrics(AppConfig_ appConfig, const string jsonData)
 {
 	CURL* curl;
 	CURLcode eRet = CURLcode::CURLE_OK;
 	curl = curl_easy_init();
 	if (curl) {
 		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-		curl_easy_setopt(curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_URL, appConfig.remoteUrl.c_str());
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 		curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, "https");
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 500); // timeout is only 500ms
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, appConfig.timeout_for_sending_metrics_ms); // timeout is only 500ms by default
 		struct curl_slist* headers = NULL;
 		headers = curl_slist_append(headers, "Content-Type: application/json");
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
