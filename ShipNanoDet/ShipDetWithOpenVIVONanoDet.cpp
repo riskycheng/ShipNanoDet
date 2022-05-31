@@ -9,6 +9,7 @@
 #include "commonDef.h"
 #include "vlc_reader.h"
 
+#define VERSION_CODE "shipDet v1.8_20220531_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -313,6 +314,8 @@ void parseConfig(const std::string jsonConfigPath) {
 
     int timeout_for_sending_metrics_ms = root["application"]["timeout_for_sending_metrics_ms"].asInt();
 
+    bool need_UIs = root["application"]["need_UIs"].asBool();
+
     // start updating for these fields
     mAppConfig.det_conf_thresh = det_conf_thresh;
     mAppConfig.x1 = x1;
@@ -344,6 +347,8 @@ void parseConfig(const std::string jsonConfigPath) {
     mAppConfig.local_metrics_sending_queue_length = local_metrics_sending_queue_length;
 
     mAppConfig.timeout_for_sending_metrics_ms = timeout_for_sending_metrics_ms;
+
+    mAppConfig.need_UIs = need_UIs;
 }
 
 
@@ -364,6 +369,7 @@ void printAppConfig(const AppConfig_& appConfig) {
     printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
     printf("\t enable_debugging_log:%s\n", appConfig.enable_debugging_log ? "true" : "false");
     printf("\t timeout_for_sending_metrics_ms:%d\n", appConfig.timeout_for_sending_metrics_ms);
+    printf("\t need UIs:%s\n", appConfig.need_UIs ? "true" : "false");
     printf("******************** AppConfig *********************\n");
 }
 
@@ -520,8 +526,9 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
         cv::putText(image, warningTxt, cv::Point(text_x, text_y),
             cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
     }
+    
     resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
-    cv::imshow("shipDet v1.7_20220528_openVINO", image);
+    cv::imshow(VERSION_CODE, image);
     cv::waitKey(1);
     image.release();
 }
@@ -573,8 +580,11 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             // not inference, use the previous one
             printf("use the previous inferred result...\n");
         touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
-        draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-        cv::waitKey(30);
+        if (mAppConfig.need_UIs)
+        {
+            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+            cv::waitKey(30);
+        }
     }
     else
     {
@@ -600,8 +610,11 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
         if (mAppConfig.enable_debugging_log)
             printf("inference video with OpenVINO cost: %.2f ms \n", cost);
-        draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
-        cv::waitKey(1);
+        if (mAppConfig.need_UIs)
+        {
+            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+            cv::waitKey(1);
+        }
         resized_img.release();
     }
     // update fields of FrameResult
@@ -695,8 +708,13 @@ int main(int argc, char** argv)
         printf("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
         return -1;
     }
-    std::cout << "start init model with openVINO..." << std::endl;
-
+    printf("\n\n");
+    printf("**************************************************************************\n");
+    printf("**************************************************************************\n\n");
+    printf("******************** %s **********************\n\n", VERSION_CODE);
+    printf("**************************************************************************\n");
+    printf("**************************************************************************\n");
+    printf("\n\n");
 
     // parse the json for initialization
     std::string jsonFilePath = argv[1];
