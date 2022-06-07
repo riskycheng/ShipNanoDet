@@ -137,6 +137,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;NOMINMAX;CURL_STATICLIB;BUILDING_LIBCURL;HTTP_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,19 +148,32 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BYTETracker.cpp" />
     <ClCompile Include="jsoncpp.cpp" />
+    <ClCompile Include="KalmanFilter.cpp" />
+    <ClCompile Include="lapjv.cpp" />
     <ClCompile Include="nanodet_openvino.cpp" />
     <ClCompile Include="nanodet_plus.cpp" />
+    <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Rect.cpp" />
     <ClCompile Include="ShipDetWithNcnnNanoDet.cpp" />
     <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp" />
+    <ClCompile Include="STrack.cpp" />
     <ClCompile Include="vlc_reader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BYTETracker.h" />
     <ClInclude Include="commonDef.h" />
     <ClInclude Include="json-forwards.h" />
     <ClInclude Include="json.h" />
+    <ClInclude Include="KalmanFilter.h" />
+    <ClInclude Include="lapjv.h" />
     <ClInclude Include="nanodet_openvino.h" />
     <ClInclude Include="nanodet_plus.h" />
+    <ClInclude Include="Object.h" />
+    <ClInclude Include="Rect.h" />
+    <ClInclude Include="STrack.h" />
+    <ClInclude Include="Utils.h" />
     <ClInclude Include="vlc_reader.h" />
   </ItemGroup>
   <ItemGroup>
