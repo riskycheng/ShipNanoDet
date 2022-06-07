@@ -100,6 +100,7 @@ typedef struct BoxInfo
     float y2;
     float score;
     int label;
+    int trackID;
 } BoxInfo;
 
 class NanoDetVINO

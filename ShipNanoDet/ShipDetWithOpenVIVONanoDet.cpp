@@ -8,15 +8,45 @@
 #include <fstream>
 #include "commonDef.h"
 #include "vlc_reader.h"
+#include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v1.8_20220531_openVINO"
+#define VERSION_CODE "shipDet v1.9_20220607_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
 using namespace cv;
+using namespace byte_track;
 
 static AppConfig_ mAppConfig;
 void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
+
+
+// define the global tracker
+BYTETracker gTracker(30, 30);
+
+
+std::vector<byte_track::Object> convertBoxInfos2Objects(const std::vector<BoxInfo>& boxesInfo) {
+    std::vector<byte_track::Object> objectsInfo;
+    for (auto item : boxesInfo)
+    {
+        auto obj = byte_track::Object(byte_track::Rect(item.x1, item.y1, item.x2 - item.x1, item.y2 - item.y1), item.label, item.score);
+        objectsInfo.push_back(obj);
+    }
+    return objectsInfo;
+}
+
+BoxInfo convertTrackerObject2BoxInfo(byte_track::Object object) {
+    BoxInfo boxInfo = BoxInfo();
+    boxInfo.x1 = object.rect.x();
+    boxInfo.y1 = object.rect.y();
+    boxInfo.x2 = object.rect.width() + boxInfo.x1;
+    boxInfo.y2 = object.rect.height() + boxInfo.y1;
+    boxInfo.label = object.label;
+    boxInfo.score = object.prob;
+    return boxInfo;
+}
+
+
 
 void printFrameResult_(FrameResult result) {
     if (!mAppConfig.enable_debugging_log) return;
@@ -440,7 +470,7 @@ const int color_list[80][3] =
     {216 , 82 , 24}
 };
 
-void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_rect_ effect_roi, AppConfig_* appConfig, bool warning)
+void draw_bboxes(const cv::Mat& bgr, std::vector<BoxInfo> bboxes, object_rect_ effect_roi, AppConfig_* appConfig, bool warning)
 {
     static const char* class_names[] = { "ship" };
 
@@ -464,7 +494,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
             cv::Point((bbox.x2 - effect_roi.x) * width_ratio, (bbox.y2 - effect_roi.y) * height_ratio)), cv::Scalar(0, 250, 0), 2);
 
         char* text = new char[50];
-        sprintf(text, "%s %.1f%%", class_names[bbox.label], bbox.score * 100);
+        sprintf(text, "%s_[%d] %.1f%%", class_names[bbox.label], bbox.trackID, bbox.score * 100);
 
         int baseLine = 0;
         cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
@@ -477,7 +507,7 @@ void draw_bboxes(const cv::Mat& bgr, const std::vector<BoxInfo>& bboxes, object_
             x = image.cols - label_size.width;
 
         cv::rectangle(image, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
-            cv::Scalar(0, 250, 0), -1);
+            cv::Scalar(0, 0, 255), -1);
 
         cv::putText(image, text, cv::Point(x, y + label_size.height),
             cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(255, 255, 255));
@@ -604,6 +634,29 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         //delete[] imageName;
 
         results = detector.detect(resized_img);
+
+        // applying with tracker
+        auto detectedObjs = convertBoxInfos2Objects(results);
+        auto output_stracks = gTracker.update(detectedObjs);
+
+        // update the results
+        results.clear();
+        for (const auto & outputs_per_frame : output_stracks)
+        {
+            const auto& rect = outputs_per_frame->getRect();
+            const auto& track_id = outputs_per_frame->getTrackId();
+            const auto& conf = outputs_per_frame->getScore();
+            BoxInfo boxInfo = BoxInfo();
+            boxInfo.x1 = rect.x();
+            boxInfo.y1 = rect.y();
+            boxInfo.x2 = rect.width() + boxInfo.x1;
+            boxInfo.y2 = rect.height() + boxInfo.y1;
+            boxInfo.label = 0;
+            boxInfo.score = conf;
+            boxInfo.trackID = track_id;
+            results.push_back(boxInfo);
+        }
+
         end = clock();
         cost = difftime(end, start);
         if (!results.empty())
