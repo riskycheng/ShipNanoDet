@@ -9,6 +9,7 @@
 #include <string>
 #include <opencv2/core.hpp>
 #include <inference_engine.hpp>
+#include <vector>
 
 
 struct  AppConfig_ {
@@ -102,6 +103,12 @@ typedef struct BoxInfo
     int label;
     int trackID;
 } BoxInfo;
+
+typedef struct ShipInTracking
+{
+    int trackerID;
+    std::vector<BoxInfo> historyBoxLocations;
+};
 
 class NanoDetVINO
 {

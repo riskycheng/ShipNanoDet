@@ -17,6 +17,11 @@ using namespace std;
 using namespace cv;
 using namespace byte_track;
 
+
+
+// the global ships in tracking
+vector<ShipInTracking> mShipsInTracking;
+
 static AppConfig_ mAppConfig;
 void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool bIsClosed = true);
 
@@ -563,6 +568,100 @@ void draw_bboxes(const cv::Mat& bgr, std::vector<BoxInfo> bboxes, object_rect_ e
     image.release();
 }
 
+void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ships, object_rect_ effect_roi, AppConfig_* appConfig, bool warning)
+{
+    static const char* class_names[] = { "ship" };
+
+    cv::Mat image = bgr.clone();
+    int src_w = image.cols;
+    int src_h = image.rows;
+    int dst_w = effect_roi.width;
+    int dst_h = effect_roi.height;
+    float width_ratio = (float)src_w / (float)dst_w;
+    float height_ratio = (float)src_h / (float)dst_h;
+
+
+
+    for (size_t i = 0; i < ships.size(); i++)
+    {
+        const ShipInTracking& ship = ships[i];
+        int totalHistoryRecordsLen = ship.historyBoxLocations.size();
+        if (totalHistoryRecordsLen == 0) continue;
+        const BoxInfo &bbox = ship.historyBoxLocations[totalHistoryRecordsLen - 1]; // pnly render the last/latest one
+
+        cv::rectangle(image, cv::Rect(cv::Point((bbox.x1 - effect_roi.x) * width_ratio, (bbox.y1 - effect_roi.y) * height_ratio),
+            cv::Point((bbox.x2 - effect_roi.x) * width_ratio, (bbox.y2 - effect_roi.y) * height_ratio)), getTrackerColor(ship.trackerID), 2);
+
+        char* text = new char[50];
+        sprintf(text, "%s_[%d] %.1f%%", class_names[bbox.label], bbox.trackID, bbox.score * 100);
+
+        int baseLine = 0;
+        cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
+
+        int x = (bbox.x1 - effect_roi.x) * width_ratio;
+        int y = (bbox.y1 - effect_roi.y) * height_ratio - label_size.height - baseLine;
+        if (y < 0)
+            y = 0;
+        if (x + label_size.width > image.cols)
+            x = image.cols - label_size.width;
+
+        cv::rectangle(image, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
+            getTrackerColor(ship.trackerID), -1);
+
+        cv::putText(image, text, cv::Point(x, y + label_size.height),
+            cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+
+        delete[] text;
+    }
+
+    // render the dangerous region
+    //cv::rectangle(image, cv::Rect(cv::Point(appConfig->x1, appConfig->y1), cv::Point(appConfig->x2, appConfig->y2)), cv::Scalar(0, 0, 255), 2);
+    vector<Point> points;
+    points.push_back(cv::Point(appConfig->x1, appConfig->y1));
+    points.push_back(cv::Point(appConfig->x2, appConfig->y2));
+    points.push_back(cv::Point(appConfig->x3, appConfig->y3));
+    points.push_back(cv::Point(appConfig->x4, appConfig->y4));
+    DrawPolygon(image, points, false);
+
+    // render the text hint to indicate it is dangerous region
+    string dangerousRegionName = "dangerous region";
+    auto baseLine = 0;
+    auto label_size = cv::getTextSize(dangerousRegionName, cv::FONT_HERSHEY_PLAIN, 0.6f, 1, &baseLine);
+    cv::putText(image, dangerousRegionName.c_str(), cv::Point(appConfig->x3 - label_size.width / 0.5f, appConfig->y3 - label_size.height),
+        cv::FONT_HERSHEY_SIMPLEX, 0.6f, cv::Scalar(255, 255, 255));
+
+    // render the dangerous hint if hit
+    int warningBoxWidth = 300;
+    int warningBoxHeight = 50;
+    int warningBoxTop = 150;
+    auto warningTxt = "Danger Detected";
+    int warningBox_x1 = (appConfig->input_width - warningBoxWidth) / 2;
+    int warningBox_y1 = warningBoxTop;
+    int warningBox_x2 = (appConfig->input_width + warningBoxWidth) / 2;
+    int warningBox_y2 = warningBox_y1 + warningBoxHeight;
+    auto warningBoxRect = cv::Rect(cv::Point(warningBox_x1, warningBox_y1), cv::Point(warningBox_x2, warningBox_y2));
+
+    if (warning)
+    {
+        // render the out-lier
+        cv::rectangle(image, warningBoxRect, cv::Scalar(50, 120, 250), 6);
+        // fill in
+        cv::rectangle(image, warningBoxRect, cv::Scalar(50, 200, 250), -1);
+        // render the text
+        int baseLine = 0;
+        cv::Size label_size = cv::getTextSize(warningTxt, cv::FONT_HERSHEY_PLAIN, 1.0f, 1, &baseLine);
+        int text_x = warningBox_x1 + (warningBoxWidth - label_size.width) / 8;
+        int text_y = (warningBox_y1 + warningBox_y2) / 2 + baseLine;
+        cv::putText(image, warningTxt, cv::Point(text_x, text_y),
+            cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
+    }
+
+    resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
+    cv::imshow(VERSION_CODE, image);
+    cv::waitKey(1);
+    image.release();
+}
+
 FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_* appConfig, bool skip) {
     int height = detector.input_size[0];
     int width = detector.input_size[1];
@@ -612,7 +711,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
         if (mAppConfig.need_UIs)
         {
-            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+            draw_bboxes_inTracking(image, mShipsInTracking, effect_roi, appConfig, touchedWarning);
             cv::waitKey(30);
         }
     }
@@ -639,6 +738,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         auto detectedObjs = convertBoxInfos2Objects(results);
         auto output_stracks = gTracker.update(detectedObjs);
 
+
         // update the results
         results.clear();
         for (const auto & outputs_per_frame : output_stracks)
@@ -655,6 +755,26 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             boxInfo.score = conf;
             boxInfo.trackID = track_id;
             results.push_back(boxInfo);
+
+            // add to the shipsInTracking array
+            bool founded = false;
+            for (int t = 0; t < mShipsInTracking.size(); t++)
+            {
+                if (mShipsInTracking[t].trackerID == track_id)
+                {
+                    mShipsInTracking[t].historyBoxLocations.push_back(boxInfo);
+                    founded = true;
+                    break;
+                }
+            }
+            if (!founded)
+            {
+                // did not find this shipInTracking in the global queue, need to insert it
+                ShipInTracking shipInTracking = ShipInTracking();
+                shipInTracking.trackerID = track_id;
+                shipInTracking.historyBoxLocations.push_back(boxInfo);
+                mShipsInTracking.push_back(shipInTracking);
+            }
         }
 
         end = clock();
@@ -665,7 +785,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             printf("inference video with OpenVINO cost: %.2f ms \n", cost);
         if (mAppConfig.need_UIs)
         {
-            draw_bboxes(image, results, effect_roi, appConfig, touchedWarning);
+            draw_bboxes_inTracking(image, mShipsInTracking, effect_roi, appConfig, touchedWarning);
             cv::waitKey(1);
         }
         resized_img.release();

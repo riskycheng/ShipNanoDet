@@ -2,9 +2,14 @@
 #include <mat.h>
 #include <thread>
 #include "curl/curl.h"
+#include <string>
+#include <opencv2/opencv.hpp>
+#include "tinyColormap.h"
 
+using namespace cv;
 using namespace std;
 
+#define TRACKING_COUNTS 10
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wldap32.lib")
@@ -108,6 +113,21 @@ CURLcode sendOutMetrics(AppConfig_ appConfig, const string jsonData)
 	curl_easy_cleanup(curl);
 	return eRet;
 }
+
+
+
+
+Scalar getTrackerColor(int trackerID) {
+	
+	float value = 1.f * (trackerID % TRACKING_COUNTS) / TRACKING_COUNTS;
+	const tinycolormap::Color color = tinycolormap::GetQuantizedColor(value, TRACKING_COUNTS, tinycolormap::ColormapType::Parula);
+	// construct the color for different detected object
+	printf("r:%d, g:%d, b:%d \n", color.ri(), color.gi(), color.bi());
+	return Scalar(color.ri(), color.gi(), color.bi());
+}
+
+
+
 
 bool sendOutMetrics_Simulation(const char* url, const string jsonData)
 {

@@ -173,6 +173,7 @@
     <ClInclude Include="Object.h" />
     <ClInclude Include="Rect.h" />
     <ClInclude Include="STrack.h" />
+    <ClInclude Include="tinyColormap.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="vlc_reader.h" />
   </ItemGroup>
