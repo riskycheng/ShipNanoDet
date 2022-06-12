@@ -17,7 +17,9 @@ using namespace std;
 using namespace cv;
 using namespace byte_track;
 
-
+#define DROP_FIRST_COUPLE_DETECTIONS 30
+#define MIN_LEN_TO_DECIDE_MOVING_DIR 30
+#define MIN_LEN_TO_DECIDE_MOVING_OUT_OF_VIEW 30 * 10
 
 // the global ships in tracking
 vector<ShipInTracking> mShipsInTracking;
@@ -580,6 +582,13 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
     for (size_t i = 0; i < ships.size(); i++)
     {
         const ShipInTracking& ship = ships[i];
+        if (ship.outOfView)
+        {
+            if (mAppConfig.enable_debugging_log)
+                printf("this ship[%d] is out of view \n", ship.trackerID);
+            continue;
+        }
+            
         int totalHistoryRecordsLen = ship.historyBoxLocations.size();
         if (totalHistoryRecordsLen == 0) continue;
         const BoxInfo &bbox = ship.historyBoxLocations[totalHistoryRecordsLen - 1]; // pnly render the last/latest one
@@ -605,6 +614,19 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 
         cv::putText(image, text, cv::Point(x, y + label_size.height),
             cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+
+        // render the moving path
+        if (!ship.outOfView)
+        {
+            vector<Point> centers;
+            for (auto& item : ship.historyBoxLocations)
+            {
+                centers.push_back( (Point(item.x1, item.y1) + Point(item.x2, item.y2)) / 2 );
+            }
+
+            // draw the polyLines
+            polylines(image, centers, false, getTrackerColor(ship.trackerID), 4);
+        }
 
         delete[] text;
     }
@@ -732,6 +754,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         // applying with tracker
         auto detectedObjs = convertBoxInfos2Objects(results);
         auto output_stracks = gTracker.update(detectedObjs);
+        
 
 
         // update the results
@@ -749,6 +772,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             boxInfo.label = 0;
             boxInfo.score = conf;
             boxInfo.trackID = track_id;
+
             // convert to the original scale
             BoxInfo boxInfo_ = mapCoordinates(appConfig, boxInfo, effect_roi);
             results.push_back(boxInfo_);
@@ -758,9 +782,13 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             for (int t = 0; t < mShipsInTracking.size(); t++)
             {
                 if (mShipsInTracking[t].trackerID == track_id)
-                {
-                    mShipsInTracking[t].historyBoxLocations.push_back(boxInfo_);
+                {   
                     founded = true;
+                    if (mShipsInTracking[t].droppedFirstCounts++ < DROP_FIRST_COUPLE_DETECTIONS) break;
+                    mShipsInTracking[t].historyBoxLocations.push_back(boxInfo_);
+                    // update the cooresponding moving direction
+                    int movingDir = calculateDirection(mShipsInTracking[t].historyBoxLocations, MIN_LEN_TO_DECIDE_MOVING_DIR);
+                    mShipsInTracking[t].movingDirection = movingDir;
                     break;
                 }
             }
@@ -769,8 +797,45 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
                 // did not find this shipInTracking in the global queue, need to insert it
                 ShipInTracking shipInTracking = ShipInTracking();
                 shipInTracking.trackerID = track_id;
-                shipInTracking.historyBoxLocations.push_back(boxInfo);
                 mShipsInTracking.push_back(shipInTracking);
+            }    
+        }
+
+        // check whether the current existing items have been hit, it will be treated as gone if continuous N frames not detected
+        for (auto& ship : mShipsInTracking)
+        {
+            if (ship.outOfView)
+            {
+                if (mAppConfig.enable_debugging_log)
+                    printf("this ship[%d] is out-of-view, skip checking...\n", ship.trackerID);
+                continue;
+            }
+
+            bool hit = false;
+            for (auto& detItem : output_stracks)
+            {
+                if (detItem->getTrackId() == ship.trackerID)
+                {
+                    hit = true;
+                    break;
+                }
+            }
+            if (!ship.historyBoxLocations.empty())
+            {
+                if (!hit)
+                {
+                    // this ship is not hit for N times
+                    ship.missedContinuousHits++;
+                }
+                else
+                {
+                    ship.missedContinuousHits = 0;
+                }
+
+                if (ship.missedContinuousHits >= MIN_LEN_TO_DECIDE_MOVING_OUT_OF_VIEW)
+                {
+                    ship.outOfView = true;
+                }
             }
         }
 
