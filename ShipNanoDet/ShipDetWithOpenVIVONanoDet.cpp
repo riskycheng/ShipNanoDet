@@ -82,6 +82,7 @@ BoxInfo mapCoordinates(AppConfig_* appConfig, BoxInfo box, object_rect_ effect_r
 
     result.label = box.label;
     result.score = box.score;
+    result.trackID = box.trackID;
 
     return result;
 }
@@ -120,7 +121,7 @@ bool touchWarningLinesPologyn(AppConfig_* appConfig, vector<BoxInfo>& boxes, obj
     int maxX = 0;
     for (int i = 0; i < boxes.size(); i++)
     {
-        auto item = mapCoordinates(appConfig, boxes[i], effect_roi);
+        const auto& item = boxes[i];
         if (isInLeft)
         {
             if (item.x1 < minX)
@@ -146,7 +147,7 @@ bool touchWarningLinesPologyn(AppConfig_* appConfig, vector<BoxInfo>& boxes, obj
     bool tmpTouched = false;
 
     // start cal the distance
-    auto boxInfo = mapCoordinates(appConfig, boxes[targetIndex], effect_roi);
+    const auto& boxInfo = boxes[targetIndex];
         
     // x = x2 + (y - y2) * delta ; delta = ((x2 - x1) / (y2 - y1))
     auto tmp_x_right_up   = appConfig->x2 + (boxInfo.y1 - appConfig->y2) * delta_right;
@@ -235,7 +236,7 @@ bool touchWarningLines(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rec
     int maxX = 0;
     for (int i = 0; i < boxes.size(); i++)
     {
-        auto item = mapCoordinates(appConfig, boxes[i], effect_roi);
+        const auto& item = boxes[i];
         if (isInLeft)
         {
             if (item.x1 < minX)
@@ -254,7 +255,7 @@ bool touchWarningLines(AppConfig_* appConfig, vector<BoxInfo>& boxes, object_rec
         }
     }
 
-    auto boxInfo = mapCoordinates(appConfig, boxes[targetIndex], effect_roi);
+    const auto &boxInfo = boxes[targetIndex];
 
     if (boxInfo.x2 < appConfig->x1 || boxInfo.x1 > appConfig->x2)
     {
@@ -568,19 +569,13 @@ void draw_bboxes(const cv::Mat& bgr, std::vector<BoxInfo> bboxes, object_rect_ e
     image.release();
 }
 
-void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ships, object_rect_ effect_roi, AppConfig_* appConfig, bool warning)
+void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ships, AppConfig_* appConfig, bool warning)
 {
     static const char* class_names[] = { "ship" };
 
     cv::Mat image = bgr.clone();
     int src_w = image.cols;
     int src_h = image.rows;
-    int dst_w = effect_roi.width;
-    int dst_h = effect_roi.height;
-    float width_ratio = (float)src_w / (float)dst_w;
-    float height_ratio = (float)src_h / (float)dst_h;
-
-
 
     for (size_t i = 0; i < ships.size(); i++)
     {
@@ -589,8 +584,8 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
         if (totalHistoryRecordsLen == 0) continue;
         const BoxInfo &bbox = ship.historyBoxLocations[totalHistoryRecordsLen - 1]; // pnly render the last/latest one
 
-        cv::rectangle(image, cv::Rect(cv::Point((bbox.x1 - effect_roi.x) * width_ratio, (bbox.y1 - effect_roi.y) * height_ratio),
-            cv::Point((bbox.x2 - effect_roi.x) * width_ratio, (bbox.y2 - effect_roi.y) * height_ratio)), getTrackerColor(ship.trackerID), 2);
+        cv::rectangle(image, cv::Rect(cv::Point(bbox.x1, bbox.y1),
+            cv::Point(bbox.x2, bbox.y2)), getTrackerColor(ship.trackerID), 2);
 
         char* text = new char[50];
         sprintf(text, "%s_[%d] %.1f%%", class_names[bbox.label], bbox.trackID, bbox.score * 100);
@@ -598,8 +593,8 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
         int baseLine = 0;
         cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
 
-        int x = (bbox.x1 - effect_roi.x) * width_ratio;
-        int y = (bbox.y1 - effect_roi.y) * height_ratio - label_size.height - baseLine;
+        int x = bbox.x1;
+        int y = bbox.y1 - label_size.height - baseLine;
         if (y < 0)
             y = 0;
         if (x + label_size.width > image.cols)
@@ -711,7 +706,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
         touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
         if (mAppConfig.need_UIs)
         {
-            draw_bboxes_inTracking(image, mShipsInTracking, effect_roi, appConfig, touchedWarning);
+            draw_bboxes_inTracking(image, mShipsInTracking, appConfig, touchedWarning);
             cv::waitKey(30);
         }
     }
@@ -754,7 +749,9 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             boxInfo.label = 0;
             boxInfo.score = conf;
             boxInfo.trackID = track_id;
-            results.push_back(boxInfo);
+            // convert to the original scale
+            BoxInfo boxInfo_ = mapCoordinates(appConfig, boxInfo, effect_roi);
+            results.push_back(boxInfo_);
 
             // add to the shipsInTracking array
             bool founded = false;
@@ -762,7 +759,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             {
                 if (mShipsInTracking[t].trackerID == track_id)
                 {
-                    mShipsInTracking[t].historyBoxLocations.push_back(boxInfo);
+                    mShipsInTracking[t].historyBoxLocations.push_back(boxInfo_);
                     founded = true;
                     break;
                 }
@@ -785,16 +782,15 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
             printf("inference video with OpenVINO cost: %.2f ms \n", cost);
         if (mAppConfig.need_UIs)
         {
-            draw_bboxes_inTracking(image, mShipsInTracking, effect_roi, appConfig, touchedWarning);
+            draw_bboxes_inTracking(image, mShipsInTracking, appConfig, touchedWarning);
             cv::waitKey(1);
         }
         resized_img.release();
     }
     // update fields of FrameResult
     frameResult.frameID = frameID;
-    for (BoxInfo& box_ : results)
+    for (BoxInfo& box : results)
     {
-        auto box = mapCoordinates(appConfig, box_, effect_roi);
         auto shipBox = ShipBox();
         shipBox.x = box.x1;
         shipBox.y = box.y1;

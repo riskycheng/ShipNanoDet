@@ -122,7 +122,6 @@ Scalar getTrackerColor(int trackerID) {
 	float value = 1.f * (trackerID % TRACKING_COUNTS) / TRACKING_COUNTS;
 	const tinycolormap::Color color = tinycolormap::GetQuantizedColor(value, TRACKING_COUNTS, tinycolormap::ColormapType::Parula);
 	// construct the color for different detected object
-	printf("r:%d, g:%d, b:%d \n", color.ri(), color.gi(), color.bi());
 	return Scalar(color.ri(), color.gi(), color.bi());
 }
 
