@@ -106,7 +106,12 @@ typedef struct BoxInfo
 
 typedef struct ShipInTracking
 {
+    int missedContinuousHits = 0; // it is treated as out-of-view when reaching this contiunous NUM missing Det
+    int droppedFirstCounts = 0; // it will drop the first N frames to ensure Tracker takes effects
     int trackerID;
+    bool outOfView = false;
+    // 0 stands for right->left, 1 stands for left->right
+    int movingDirection = -1;
     std::vector<BoxInfo> historyBoxLocations;
 };
 

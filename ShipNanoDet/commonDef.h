@@ -5,6 +5,7 @@
 #include <string>
 #include <opencv2/opencv.hpp>
 #include "tinyColormap.h"
+#include "nanodet_openvino.h"
 
 using namespace cv;
 using namespace std;
@@ -135,4 +136,32 @@ bool sendOutMetrics_Simulation(const char* url, const string jsonData)
 	Sleep(200);
 	printf("simulation on the sendingOut metrics finished\n");
 	return true;
+}
+
+
+
+/*
+*  0 stands for right->left, 1 stands for left->right
+*/
+int calculateDirection(std::vector<BoxInfo> historyBoxLocations, int minLengthToDecide) {
+	int movingDirection = -1;
+	int currentQueueLen = historyBoxLocations.size();
+	if (currentQueueLen < minLengthToDecide) return movingDirection;
+	int* xArrays = new int[currentQueueLen];
+
+	for (auto& item : historyBoxLocations)
+		*xArrays++ = (int)((item.x1 + item.x2) / 2);
+
+	int delta_positive = 0, delta_negative = 0;
+
+	for (int i = 0; i < currentQueueLen - 1; i++)
+	{
+		auto delta = xArrays[i + 1] - xArrays[i];
+		if (delta > 0)
+			delta_positive++;
+		else
+			delta_negative++;
+	}
+	movingDirection = delta_negative >= delta_positive ? 0 : 1;
+	return movingDirection;
 }
