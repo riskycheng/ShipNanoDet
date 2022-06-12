@@ -149,8 +149,11 @@ int calculateDirection(std::vector<BoxInfo> historyBoxLocations, int minLengthTo
 	if (currentQueueLen < minLengthToDecide) return movingDirection;
 	int* xArrays = new int[currentQueueLen];
 
-	for (auto& item : historyBoxLocations)
-		*xArrays++ = (int)((item.x1 + item.x2) / 2);
+	for (int i = 0; i < currentQueueLen; i++)
+	{
+		auto centerX = (int)((historyBoxLocations[i].x1 + historyBoxLocations[i].x2) / 2);
+		xArrays[i] = centerX;
+	}
 
 	int delta_positive = 0, delta_negative = 0;
 
