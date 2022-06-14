@@ -168,3 +168,29 @@ int calculateDirection(std::vector<BoxInfo> historyBoxLocations, int minLengthTo
 	movingDirection = delta_negative >= delta_positive ? 0 : 1;
 	return movingDirection;
 }
+
+
+void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
+	Mat srcImage = srcImage_.clone();
+	if (!srcImage.data || !frame.data) return;
+	Mat mask;
+	vector<Mat> rgbLayer;
+	split(srcImage, rgbLayer);
+	printf(">>>>>>>>>>> channels:%d >>>>>>>>\n\n", srcImage.channels());
+	if (srcImage.channels() == 4)
+	{
+		
+		split(srcImage, rgbLayer);
+		Mat cs[3] = {rgbLayer[0], rgbLayer[1], rgbLayer[2]};
+		merge(cs, 3, srcImage);
+		mask = rgbLayer[3]; // alpha channel as mask
+	}
+	cv::Rect roi(location.x, location.y, srcImage.cols, srcImage.rows);
+	if (roi.x >= 0 && roi.y >= 0 && roi.x + roi.width < frame.cols && roi.y + roi.height < frame.rows)
+		srcImage.copyTo(frame(roi), mask);
+	else
+	{
+		printf("error: the roi is illegal to draw this patch\n");
+	}
+	srcImage.release();
+}

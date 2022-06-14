@@ -112,6 +112,7 @@ typedef struct ShipInTracking
     bool outOfView = false;
     // 0 stands for right->left, 1 stands for left->right
     int movingDirection = -1;
+    float currentTrackingConf = 0.f;
     std::vector<BoxInfo> historyBoxLocations;
 };
 

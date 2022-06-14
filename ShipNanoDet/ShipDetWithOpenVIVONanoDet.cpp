@@ -31,6 +31,9 @@ void DrawPolygon(Mat inputImage, vector<Point> polygonPoint, bool bIsFill, bool 
 // define the global tracker
 BYTETracker gTracker(30, 30);
 
+// the global icon might be reused
+Mat patchRightMat = imread("./res/arrow_right_green.png", IMREAD_UNCHANGED);
+Mat patchLeftMat = imread("./res/arrow_left_green.png", IMREAD_UNCHANGED);
 
 std::vector<byte_track::Object> convertBoxInfos2Objects(const std::vector<BoxInfo>& boxesInfo) {
 	std::vector<byte_track::Object> objectsInfo;
@@ -596,11 +599,10 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 		cv::rectangle(image, cv::Rect(cv::Point(bbox.x1, bbox.y1),
 			cv::Point(bbox.x2, bbox.y2)), getTrackerColor(ship.trackerID), 2);
 
-		char* text = new char[50];
-		sprintf(text, "%s_[%d] %.1f%%", class_names[bbox.label], bbox.trackID, bbox.score * 100);
-
+		char* ID_txt = new char[50];
+		sprintf(ID_txt, "ID:%02d", ship.trackerID);
 		int baseLine = 0;
-		cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
+		cv::Size label_size = cv::getTextSize(ID_txt, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
 
 		int x = bbox.x1;
 		int y = bbox.y1 - label_size.height - baseLine;
@@ -609,11 +611,45 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 		if (x + label_size.width > image.cols)
 			x = image.cols - label_size.width;
 
-		cv::rectangle(image, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
+		cv::rectangle(image, cv::Rect(cv::Point(x, y), cv::Size(bbox.x2 - bbox.x1, (label_size.height + baseLine) * 3)),
 			getTrackerColor(ship.trackerID), -1);
 
-		cv::putText(image, text, cv::Point(x, y + label_size.height),
+		// render the ID-Text
+		cv::putText(image, ID_txt, cv::Point(x, y + label_size.height),
 			cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+		delete[] ID_txt;
+
+		// render the cooresponding conf
+		char* CONF_txt = new char[20];
+		sprintf(CONF_txt, "CONF:%.2f%%", ship.currentTrackingConf * 100.);
+		cv::putText(image, CONF_txt, cv::Point(x, y + label_size.height * 2.5f),
+			cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+		delete[] CONF_txt;
+
+		// render the moving direction
+		char* MOVING_DIR_txt = new char[20];
+		sprintf(MOVING_DIR_txt, "DIR:");
+		cv::putText(image, MOVING_DIR_txt, cv::Point(x, y + label_size.height * 4.f),
+			cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+		delete[] MOVING_DIR_txt;
+
+		if (ship.movingDirection == 1)
+		{
+			drawPatch(patchRightMat, image, cv::Point(x + label_size.width, y + label_size.height * 2.6f));
+		}
+		else if (ship.movingDirection == 0)
+		{
+			drawPatch(patchLeftMat, image, cv::Point(x + label_size.width, y + label_size.height * 2.6f));
+		}
+		else
+		{
+			if (mAppConfig.enable_debugging_log)
+			{
+				printf("skip rendering direction since it is not decided!\n");
+			}
+		}
+
+
 
 		// render the moving path
 		if (!ship.outOfView)
@@ -628,7 +664,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 			polylines(image, centers, false, getTrackerColor(ship.trackerID), 4);
 		}
 
-		delete[] text;
+		
 	}
 
 	// render the dangerous region
@@ -673,7 +709,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 			cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
 	}
 
-	resize(image, image, cv::Size(image.cols / 2, image.rows / 2), cv::INTER_NEAREST);
+	resize(image, image, cv::Size(1920, 1080), cv::INTER_NEAREST);
 	cv::imshow(VERSION_CODE, image);
 	cv::waitKey(1);
 	image.release();
@@ -789,6 +825,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 					// update the cooresponding moving direction
 					int movingDir = calculateDirection(mShipsInTracking[t].historyBoxLocations, MIN_LEN_TO_DECIDE_MOVING_DIR);
 					mShipsInTracking[t].movingDirection = movingDir;
+					mShipsInTracking[t].currentTrackingConf = conf;
 					break;
 				}
 			}
