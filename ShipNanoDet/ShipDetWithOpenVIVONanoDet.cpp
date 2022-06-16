@@ -574,7 +574,7 @@ void draw_bboxes(const cv::Mat& bgr, std::vector<BoxInfo> bboxes, object_rect_ e
 	image.release();
 }
 
-void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ships, AppConfig_* appConfig, bool warning)
+void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ships, const std::vector<BoxInfo> currentShips, AppConfig_* appConfig, bool warning)
 {
 	static const char* class_names[] = { "ship" };
 
@@ -663,6 +663,37 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 			// draw the polyLines
 			polylines(image, centers, false, getTrackerColor(ship.trackerID), 4);
 		}
+
+		// rendering the ship Count in right-top corner
+		char* shipTotal = new char[50];
+		char* shipCntCurrent = new char[50];
+		sprintf(shipTotal,      "ALL  Ships:%llu", mShipsInTracking.size());
+		sprintf(shipCntCurrent, "NOW Ships:%llu", currentShips.size());
+		cv::Size cntLabelSize_shipTotal = cv::getTextSize(shipTotal, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
+		cv::Size cntLabelSize_shipCntCurrent = cv::getTextSize(shipCntCurrent, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
+		cv::Point cntStartPoint(image.cols - 200, 50);
+		
+		//background for the current counting messages
+		cv::rectangle(image, cv::Rect(cntStartPoint - cv::Point(0, cntLabelSize_shipTotal.height),
+			cv::Size(cntLabelSize_shipCntCurrent.width, (cntLabelSize_shipCntCurrent.height + baseLine))),
+			Scalar(0, 255, 255), -1);
+
+		//background for the total counting messages
+		cv::rectangle(image, cv::Rect(cntStartPoint + cv::Point(0,  2 * baseLine), 
+			cv::Size(cntLabelSize_shipTotal.width, (cntLabelSize_shipTotal.height + baseLine))),
+			Scalar(0, 255, 255), -1);
+
+
+
+		cv::putText(image, shipCntCurrent, cntStartPoint,
+			cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+		delete[] shipCntCurrent;
+
+		cv::putText(image, shipTotal, cntStartPoint + cv::Point(0, cntLabelSize_shipTotal.height + 2 * baseLine),
+			cv::FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 2);
+		delete[] shipTotal;
+
+
 
 		
 	}
@@ -764,7 +795,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
 		if (mAppConfig.need_UIs)
 		{
-			draw_bboxes_inTracking(image, mShipsInTracking, appConfig, touchedWarning);
+			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
 			cv::waitKey(30);
 		}
 	}
@@ -882,7 +913,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 			printf("inference video with OpenVINO cost: %.2f ms \n", cost);
 		if (mAppConfig.need_UIs)
 		{
-			draw_bboxes_inTracking(image, mShipsInTracking, appConfig, touchedWarning);
+			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
 			cv::waitKey(1);
 		}
 		resized_img.release();
