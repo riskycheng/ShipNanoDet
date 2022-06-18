@@ -138,8 +138,6 @@ bool sendOutMetrics_Simulation(const char* url, const string jsonData)
 	return true;
 }
 
-
-
 /*
 *  0 stands for right->left, 1 stands for left->right
 */
@@ -156,10 +154,10 @@ int calculateDirection(std::vector<BoxInfo> historyBoxLocations, int minLengthTo
 	}
 
 	int delta_positive = 0, delta_negative = 0;
-
-	for (int i = 0; i < currentQueueLen - 1; i++)
+	int lastElement = xArrays[currentQueueLen - 1];
+	for (int i = 0; i < currentQueueLen - 2; i++)
 	{
-		auto delta = xArrays[i + 1] - xArrays[i];
+		auto delta = lastElement - xArrays[i];
 		if (delta > 0)
 			delta_positive++;
 		else
