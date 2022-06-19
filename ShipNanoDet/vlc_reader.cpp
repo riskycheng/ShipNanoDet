@@ -13,7 +13,8 @@ vlc_reader::vlc_reader(char* url)
 		"--rtsp-tcp",
 		"--no-audio",
 		"--extraintf=logger",
-		"--verbose=1"
+		"--verbose=1",
+		"--http-reconnect"
 	};
 	printf("%d\n", sizeof(vlc_args) / sizeof(vlc_args[0]));
 	inst = libvlc_new(sizeof(vlc_args) / sizeof(vlc_args[0]), vlc_args);
@@ -97,4 +98,13 @@ void vlc_reader::cb_unlock(void* opaque, void* picture, void* const* plane)
 void vlc_reader::cb_display(void* opaque, void* picture)
 {
 
+}
+
+libvlc_state_t vlc_reader::getStatus()
+{
+	libvlc_state_t state = libvlc_state_t::libvlc_NothingSpecial;
+	if (mp) {
+		state = libvlc_media_player_get_state(mp);
+	}
+	return state;
 }

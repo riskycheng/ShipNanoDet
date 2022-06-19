@@ -11,6 +11,7 @@ public:
 	~vlc_reader();
 	void start(int wantW = 640, int wantH = 480);
 	void pause(bool paused);
+	libvlc_state_t getStatus();
 	cv::Mat frame();
 	int w, h;
 private:
@@ -24,4 +25,6 @@ private:
 	static void* cb_lock(void* opaque, void** plane);
 	static void cb_unlock(void* opaque, void* picture, void* const* plane);
 	static void cb_display(void* opaque, void* picture);
+
+
 };

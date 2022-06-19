@@ -1074,7 +1074,8 @@ int main(int argc, char** argv)
 	FrameResult frameResult;
 	cv::Mat image;
 	int frameIndex = 0;
-	while (true)
+	bool shouldExit = false;
+	while (!shouldExit)
 	{
 		switch (mAppConfig.sourceMode)
 		{
@@ -1089,7 +1090,14 @@ int main(int argc, char** argv)
 				cvtColor(image, image, COLOR_RGBA2RGB);
 			else
 			{
-				printf("the remote rtsp frame not ready...\n");
+				// check the state of the vlc_reader
+				auto state = vlcReader.getStatus();
+				if (state == libvlc_state_t::libvlc_Ended)
+				{
+					printf("the current instance is stopped\n");
+					shouldExit = true;
+					break;
+				}
 				continue;
 			}
 
@@ -1102,8 +1110,13 @@ int main(int argc, char** argv)
 
 		if (image.data == nullptr)
 		{
-			printf("no valid frame, wait for next... \n");
-			continue;
+			printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
+			printf("\n*********************************************************");
+			printf("\n************** end of stream, will exit... **************");
+			printf("\n*********************************************************");
+			printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
+			printf("\n");
+			break;
 		}
 
 		if (frameIndex % cycle != 0)
@@ -1140,5 +1153,7 @@ int main(int argc, char** argv)
 	}
 
 	image.release();
+	destroyAllWindows();
+	printf("\n Application exited ... \n");
 	return 0;
 }
