@@ -25,6 +25,8 @@ struct ShipBox {
 	int width = 0;
 	int height = 0;
 	float conf = 0.f;
+	// indicate the ship is in left(0) /right(1) side of the dangerous region, -1 is invalid
+	int regionLoc = -1;
 };
 struct FrameResult {
 	/* cameraID used for identify where the stream comes from, need to set it inside the json config */
@@ -67,6 +69,7 @@ string generateJsonResult(FrameResult frameResult)
 		shipBox["width"] = box.width;
 		shipBox["height"] = box.height;
 		shipBox["conf"] = box.conf;
+		shipBox["regionLoc"] = box.regionLoc;
 		// append to the detectedObjs array
 		detectedObjs.append(shipBox);
 	}
@@ -190,4 +193,31 @@ void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
 		printf("error: the roi is illegal to draw this patch\n");
 	}
 	srcImage.release();
+}
+
+
+int calculateShipRegionLoc(AppConfig_* appConfig, BoxInfo boxInfo) {
+	// x = x1 + (y - y1) * delta ; delta = ((x2 - x1) / (y2 - y1))
+	float delta_right = float(appConfig->x2 - appConfig->x3) / float(appConfig->y2 - appConfig->y3);
+	float delta_left = float(appConfig->x1 - appConfig->x4) / float(appConfig->y1 - appConfig->y4);
+
+	// x = x2 + (y - y2) * delta ; delta = ((x2 - x1) / (y2 - y1))
+	auto tmp_x_right_up = appConfig->x2 + (boxInfo.y1 - appConfig->y2) * delta_right;
+	auto tmp_x_right_down = appConfig->x2 + (boxInfo.y2 - appConfig->y2) * delta_right;
+	auto tmp_x_left_up = appConfig->x1 + (boxInfo.y1 - appConfig->y1) * delta_left;
+	auto tmp_x_left_down = appConfig->x1 + (boxInfo.y2 - appConfig->y1) * delta_left;
+
+	// newly constructed rectangle
+	auto dangerousRegion_x1 = min(tmp_x_left_up, tmp_x_left_down);
+	auto dangerousRegion_y1 = boxInfo.y1;
+	auto dangerousRegion_x2 = max(tmp_x_right_up, tmp_x_right_down);
+	auto dangerousRegion_y2 = boxInfo.y2;
+
+	// ship is right of the dangerous region
+	if (boxInfo.x1 >= dangerousRegion_x2)
+		return 1; // indicating it is in right region loc
+	if (boxInfo.x2 <= dangerousRegion_x1)
+		return 0; // indicating it is in left  region loc
+
+	return -1; // invalid
 }

@@ -102,6 +102,8 @@ typedef struct BoxInfo
     float score;
     int label;
     int trackID;
+    // indicate the ship is in left(0) /right(1) side of the dangerous region, -1 is invalid
+    int regionLoc = -1;
 } BoxInfo;
 
 typedef struct ShipInTracking

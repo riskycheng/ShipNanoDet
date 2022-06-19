@@ -10,7 +10,7 @@
 #include "vlc_reader.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v1.9_20220607_openVINO"
+#define VERSION_CODE "shipDet v2.0_20220620_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -66,7 +66,7 @@ void printFrameResult_(FrameResult result) {
 	printf("Detected Ships:\n");
 	for (auto& ship : result.boxes)
 	{
-		printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f] \n", ship.x, ship.y, ship.width, ship.height, ship.conf);
+		printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f, regionLoc:%d(0:left.1:right,-1:invalid)] \n", ship.x, ship.y, ship.width, ship.height, ship.conf, ship.regionLoc);
 	}
 	printf("******************** FrameResult *********************\n");
 }
@@ -842,6 +842,10 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 
 			// convert to the original scale
 			BoxInfo boxInfo_ = mapCoordinates(appConfig, boxInfo, effect_roi);
+
+			auto regionLoc = calculateShipRegionLoc(appConfig, boxInfo_);
+			boxInfo_.regionLoc = regionLoc;
+
 			results.push_back(boxInfo_);
 
 			// add to the shipsInTracking array
@@ -928,6 +932,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		shipBox.width = box.x2 - box.x1;
 		shipBox.height = box.y2 = box.y1;
 		shipBox.conf = box.score;
+		shipBox.regionLoc = box.regionLoc;
 		frameResult.boxes.push_back(shipBox);
 	}
 	frameResult.isInDanger = touchedWarning;
@@ -958,9 +963,10 @@ void sendOutMetricsThread() {
 			// print out the json metrics
 			string jsonStr = generateJsonResult(item);
 			//sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
-			if (mAppConfig.enable_debugging_log)
+			if (mAppConfig.enable_debugging_log) {
 				printf("start sending out frameResult...\n");
-
+				printf("%s\n", jsonStr.c_str());
+			}
 
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
 
