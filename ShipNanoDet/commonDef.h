@@ -174,7 +174,6 @@ void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
 	Mat mask;
 	vector<Mat> rgbLayer;
 	split(srcImage, rgbLayer);
-	printf(">>>>>>>>>>> channels:%d >>>>>>>>\n\n", srcImage.channels());
 	if (srcImage.channels() == 4)
 	{
 		
