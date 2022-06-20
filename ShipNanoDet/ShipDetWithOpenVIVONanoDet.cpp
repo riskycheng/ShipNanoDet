@@ -60,16 +60,18 @@ BoxInfo convertTrackerObject2BoxInfo(byte_track::Object object) {
 
 void printFrameResult_(FrameResult result) {
 	if (!mAppConfig.enable_debugging_log) return;
-	printf("******************** FrameResult *********************\n");
-	printf("frameID:%d\n", result.frameID);
-	printf("In Danger:%s\n", result.isInDanger ? "true" : "false");
-	printf("Detected Ships:\n");
+	std::printf("******************** FrameResult *********************\n");
+	std::printf("frameID:%d\n", result.frameID);
+	std::printf("In Danger:%s\n", result.isInDanger ? "true" : "false");
+	std::printf("Detected Ships:\n");
 	for (auto& ship : result.boxes)
 	{
-		printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f, regionLoc:%d(0:left.1:right,-1:invalid)] \n", ship.x, ship.y, ship.width, ship.height, ship.conf, ship.regionLoc);
+		std::printf("\t[x: %d, y: %d, width: %d, height: %d, conf: %.2f, regionLoc:%d(0:left.1:right,-1:invalid)] \n", ship.x, ship.y, ship.width, ship.height, ship.conf, ship.regionLoc);
 	}
-	printf("******************** FrameResult *********************\n");
+	std::printf("******************** FrameResult *********************\n");
 }
+
+
 BoxInfo mapCoordinates(AppConfig_* appConfig, BoxInfo box, object_rect_ effect_roi) {
 	BoxInfo result = BoxInfo();
 
@@ -394,24 +396,24 @@ void parseConfig(const std::string jsonConfigPath) {
 
 
 void printAppConfig(const AppConfig_& appConfig) {
-	printf("******************** AppConfig *********************\n");
-	printf("Detector related:\n");
-	printf("\t det_conf_thresh:%.2f\n", appConfig.det_conf_thresh);
-	printf("\t use_GPU:%s\n", appConfig.use_GPU ? "true" : "false");
-	printf("Application related:\n");
-	printf("\t warning_line: [%d, %d] -> [%d, %d] -> [%d, %d] -> [%d, %d]\n",
+	std::printf("******************** AppConfig *********************\n");
+	std::printf("Detector related:\n");
+	std::printf("\t det_conf_thresh:%.2f\n", appConfig.det_conf_thresh);
+	std::printf("\t use_GPU:%s\n", appConfig.use_GPU ? "true" : "false");
+	std::printf("Application related:\n");
+	std::printf("\t warning_line: [%d, %d] -> [%d, %d] -> [%d, %d] -> [%d, %d]\n",
 		appConfig.x1, appConfig.y1, appConfig.x2, appConfig.y2,
 		appConfig.x3, appConfig.y3, appConfig.x4, appConfig.y4);
-	printf("\t thresh_overlap_px:%d\n", appConfig.thresh_overlap_px);
-	printf("\t min_continousOverlapCount:%d\n", appConfig.min_continousOverlapCount);
-	printf("\t detect_cycle:%d\n", appConfig.detect_cycle);
-	printf("\t num_threads:%d\n", appConfig.num_threads);
-	printf("\t remoteUrl:%s\n", appConfig.remoteUrl.c_str());
-	printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
-	printf("\t enable_debugging_log:%s\n", appConfig.enable_debugging_log ? "true" : "false");
-	printf("\t timeout_for_sending_metrics_ms:%d\n", appConfig.timeout_for_sending_metrics_ms);
-	printf("\t need UIs:%s\n", appConfig.need_UIs ? "true" : "false");
-	printf("******************** AppConfig *********************\n");
+	std::printf("\t thresh_overlap_px:%d\n", appConfig.thresh_overlap_px);
+	std::printf("\t min_continousOverlapCount:%d\n", appConfig.min_continousOverlapCount);
+	std::printf("\t detect_cycle:%d\n", appConfig.detect_cycle);
+	std::printf("\t num_threads:%d\n", appConfig.num_threads);
+	std::printf("\t remoteUrl:%s\n", appConfig.remoteUrl.c_str());
+	std::printf("\t local_metrics_sending_queue_length:%d\n", appConfig.local_metrics_sending_queue_length);
+	std::printf("\t enable_debugging_log:%s\n", appConfig.enable_debugging_log ? "true" : "false");
+	std::printf("\t timeout_for_sending_metrics_ms:%d\n", appConfig.timeout_for_sending_metrics_ms);
+	std::printf("\t need UIs:%s\n", appConfig.need_UIs ? "true" : "false");
+	std::printf("******************** AppConfig *********************\n");
 }
 
 int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_rect_& effect_area)
@@ -470,7 +472,7 @@ int resize_uniform_VINO(cv::Mat& src, cv::Mat& dst, cv::Size dst_size, object_re
 		effect_area.height = tmp_h;
 	}
 	else {
-		printf("error in resize_uniform_VINO\n");
+		std::printf("error in resize_uniform_VINO\n");
 	}
 	tmp.release();
 	return 0;
@@ -588,7 +590,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 		if (ship.outOfView)
 		{
 			if (mAppConfig.enable_debugging_log)
-				printf("this ship[%d] is out of view \n", ship.trackerID);
+				std::printf("this ship[%d] is out of view \n", ship.trackerID);
 			continue;
 		}
 
@@ -645,7 +647,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 		{
 			if (mAppConfig.enable_debugging_log)
 			{
-				printf("skip rendering direction since it is not decided!\n");
+				std::printf("skip rendering direction since it is not decided!\n");
 			}
 		}
 
@@ -791,7 +793,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 	{
 		if (mAppConfig.enable_debugging_log)
 			// not inference, use the previous one
-			printf("use the previous inferred result...\n");
+			std::printf("use the previous inferred result...\n");
 		touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
 		if (mAppConfig.need_UIs)
 		{
@@ -879,7 +881,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 			if (ship.outOfView || ship.historyBoxLocations.empty())
 			{
 				if (mAppConfig.enable_debugging_log)
-					printf("this ship[%d] is out-of-view, skip checking...\n", ship.trackerID);
+					std::printf("this ship[%d] is out-of-view, skip checking...\n", ship.trackerID);
 				continue;
 			}
 
@@ -914,7 +916,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		if (!results.empty())
 			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
 		if (mAppConfig.enable_debugging_log)
-			printf("inference video with OpenVINO cost: %.2f ms \n", cost);
+			std::printf("inference video with OpenVINO cost: %.2f ms \n", cost);
 		if (mAppConfig.need_UIs)
 		{
 			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
@@ -951,7 +953,7 @@ void sendOutMetricsThread() {
 		{
 			mFrameResutsCached.clear();
 			if (mAppConfig.enable_debugging_log)
-				printf("current local metrics queue cleared up to avoid lantency > %d \n", mAppConfig.local_metrics_sending_queue_length);
+				std::printf("current local metrics queue cleared up to avoid lantency > %d \n", mAppConfig.local_metrics_sending_queue_length);
 		}
 
 
@@ -964,45 +966,45 @@ void sendOutMetricsThread() {
 			string jsonStr = generateJsonResult(item);
 			//sendOutMetrics(REMOTE_SERVICE_ADDR.c_str(), jsonStr);
 			if (mAppConfig.enable_debugging_log) {
-				printf("start sending out frameResult...\n");
-				printf("%s\n", jsonStr.c_str());
+				std::printf("start sending out frameResult...\n");
+				std::printf("%s\n", jsonStr.c_str());
 			}
 
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
 
 			if (eRet == CURLE_FAILED_INIT)
 			{
-				printf("[error] failed to init the Curl interface...\n");
+				std::printf("[error] failed to init the Curl interface...\n");
 			}
 			else if (eRet == CURLE_COULDNT_RESOLVE_PROXY || eRet == CURLE_COULDNT_RESOLVE_HOST)
 			{
-				printf("[error] cannot resolve the host, ensure the host address is correct...\n");
+				std::printf("[error] cannot resolve the host, ensure the host address is correct...\n");
 			}
 			else if (eRet == CURLE_COULDNT_CONNECT)
 			{
-				printf("[error] cannot connect to remote serive, ensure it started properly...\n");
+				std::printf("[error] cannot connect to remote serive, ensure it started properly...\n");
 			}
 			else if (eRet == CURLE_OK)
 			{
 				if (mAppConfig.enable_debugging_log)
 				{
-					printf("[success] remote API calling succeeds...\n");
+					std::printf("[success] remote API calling succeeds...\n");
 				}
 			}
 			else if (eRet == CURLE_OPERATION_TIMEDOUT)
 			{
-				printf("[error] timeOut sending out metrics to %s...\n", mAppConfig.remoteUrl.c_str());
+				std::printf("[error] timeOut sending out metrics to %s...\n", mAppConfig.remoteUrl.c_str());
 			}
 			else
 			{
-				printf("[error] failed to send out metrics due to %s...\n", eRet);
+				std::printf("[error] failed to send out metrics due to %s...\n", eRet);
 			}
 			// remove the first one 
 			mFrameResutsCached.erase(mFrameResutsCached.begin());
 		}
 		else {
 			if (mAppConfig.enable_debugging_log)
-				printf("no valid result in the queue pool yet \n");
+				std::printf("no valid result in the queue pool yet \n");
 		}
 	}
 }
@@ -1011,16 +1013,16 @@ int main(int argc, char** argv)
 {
 	if (argc != 2)
 	{
-		printf("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
+		std::printf("usage: shipDet.exe [config_file_path] \n e.g., \n shipDet.exe config.json");
 		return -1;
 	}
-	printf("\n\n");
-	printf("**************************************************************************\n");
-	printf("**************************************************************************\n\n");
-	printf("******************** %s **********************\n\n", VERSION_CODE);
-	printf("**************************************************************************\n");
-	printf("**************************************************************************\n");
-	printf("\n\n");
+	std::printf("\n\n");
+	std::printf("**************************************************************************\n");
+	std::printf("**************************************************************************\n\n");
+	std::printf("******************** %s **********************\n\n", VERSION_CODE);
+	std::printf("**************************************************************************\n");
+	std::printf("**************************************************************************\n");
+	std::printf("\n\n");
 
 	// parse the json for initialization
 	std::string jsonFilePath = argv[1];
@@ -1036,11 +1038,11 @@ int main(int argc, char** argv)
 
 	if (modelInit)
 	{
-		printf("openVINO model initialized successfully! \n");
+		std::printf("openVINO model initialized successfully! \n");
 	}
 	else
 	{
-		printf("openVINO model initialized failed, exiting... \n");
+		std::printf("openVINO model initialized failed, exiting... \n");
 		return -1;
 	}
 
@@ -1063,12 +1065,12 @@ int main(int argc, char** argv)
 		break;
 	case 2: // the remote RTSP stream
 		if (mAppConfig.enable_debugging_log)
-			printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
+			std::printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
 		vlcReader.start(rtsp_w, rtsp_h);
 		break;
 	case 3: // the still image mode, it is mainly used for debugging
 		if (mAppConfig.enable_debugging_log)
-			printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
+			std::printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
 		break;
 	default:
 		break;
@@ -1081,6 +1083,8 @@ int main(int argc, char** argv)
 	cv::Mat image;
 	int frameIndex = 0;
 	bool shouldExit = false;
+	cv::namedWindow(VERSION_CODE, cv::WINDOW_AUTOSIZE);
+	
 	while (!shouldExit)
 	{
 		switch (mAppConfig.sourceMode)
@@ -1100,7 +1104,7 @@ int main(int argc, char** argv)
 				auto state = vlcReader.getStatus();
 				if (state == libvlc_state_t::libvlc_Ended)
 				{
-					printf("the current instance is stopped\n");
+					std::printf("the current instance is stopped\n");
 					shouldExit = true;
 					break;
 				}
@@ -1116,12 +1120,12 @@ int main(int argc, char** argv)
 
 		if (image.data == nullptr)
 		{
-			printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
-			printf("\n*********************************************************");
-			printf("\n************** end of stream, will exit... **************");
-			printf("\n*********************************************************");
-			printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
-			printf("\n");
+			std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
+			std::printf("\n*********************************************************");
+			std::printf("\n************** end of stream, will exit... **************");
+			std::printf("\n*********************************************************");
+			std::printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
+			std::printf("\n");
 			break;
 		}
 
@@ -1159,7 +1163,7 @@ int main(int argc, char** argv)
 	}
 
 	image.release();
-	destroyAllWindows();
-	printf("\n Application exited ... \n");
+	cv::destroyAllWindows();
+	std::printf("\n Application exited ... \n");
 	return 0;
 }
