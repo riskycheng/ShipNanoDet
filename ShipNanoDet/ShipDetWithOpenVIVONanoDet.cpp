@@ -970,6 +970,7 @@ void sendOutMetricsThread() {
 				std::printf("%s\n", jsonStr.c_str());
 			}
 
+			printf("\nmessages from server:");
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
 
 			if (eRet == CURLE_FAILED_INIT)
