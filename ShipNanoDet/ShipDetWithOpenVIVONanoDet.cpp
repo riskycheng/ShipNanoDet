@@ -1055,7 +1055,7 @@ int main(int argc, char** argv)
 	char* address = new char[200];
 	sprintf(address, "%s", videoFilePath.c_str());
 	int rtsp_w = 1920, rtsp_h = 1080;
-	vlc_reader vlcReader(address);
+	//vlc_reader vlcReader(address);
 
 
 	switch (mAppConfig.sourceMode)
@@ -1067,7 +1067,7 @@ int main(int argc, char** argv)
 	case 2: // the remote RTSP stream
 		if (mAppConfig.enable_debugging_log)
 			std::printf("loading rtsp from:%s \n", mAppConfig.sourceLocation.c_str());
-		vlcReader.start(rtsp_w, rtsp_h);
+		//vlcReader.start(rtsp_w, rtsp_h);
 		break;
 	case 3: // the still image mode, it is mainly used for debugging
 		if (mAppConfig.enable_debugging_log)
@@ -1077,7 +1077,7 @@ int main(int argc, char** argv)
 		break;
 	}
 
-	thread rst = thread(sendOutMetricsThread);
+	//thread rst = thread(sendOutMetricsThread);
 
 	int cycle = mAppConfig.detect_cycle;
 	FrameResult frameResult;
@@ -1096,19 +1096,19 @@ int main(int argc, char** argv)
 			break;
 
 		case 2: // the remote RTSP stream
-			image = vlcReader.frame().clone();
+			//image = vlcReader.frame().clone();
 			if (image.channels() == 4)
 				cvtColor(image, image, COLOR_RGBA2RGB);
 			else
 			{
 				// check the state of the vlc_reader
-				auto state = vlcReader.getStatus();
-				if (state == libvlc_state_t::libvlc_Ended)
+				//auto state = vlcReader.getStatus();
+				/*if (state == libvlc_state_t::libvlc_Ended)
 				{
 					std::printf("the current instance is stopped\n");
 					shouldExit = true;
 					break;
-				}
+				}*/
 				continue;
 			}
 
@@ -1157,6 +1157,11 @@ int main(int argc, char** argv)
 		videoCap.release();
 	}
 
+	if (mAppConfig.sourceMode == 2)
+	{
+		//vlcReader.release();
+	}
+
 	if (mAppConfig.sourceMode == 3)
 	{
 		// indicate it is image mode
@@ -1166,5 +1171,6 @@ int main(int argc, char** argv)
 	image.release();
 	cv::destroyAllWindows();
 	std::printf("\n Application exited ... \n");
+	system("exit");
 	return 0;
 }
