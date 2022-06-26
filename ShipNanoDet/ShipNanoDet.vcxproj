@@ -153,10 +153,8 @@
     <ClCompile Include="KalmanFilter.cpp" />
     <ClCompile Include="lapjv.cpp" />
     <ClCompile Include="nanodet_openvino.cpp" />
-    <ClCompile Include="nanodet_plus.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Rect.cpp" />
-    <ClCompile Include="ShipDetWithNcnnNanoDet.cpp" />
     <ClCompile Include="ShipDetWithOpenVIVONanoDet.cpp" />
     <ClCompile Include="STrack.cpp" />
   </ItemGroup>
@@ -168,7 +166,6 @@
     <ClInclude Include="KalmanFilter.h" />
     <ClInclude Include="lapjv.h" />
     <ClInclude Include="nanodet_openvino.h" />
-    <ClInclude Include="nanodet_plus.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="Rect.h" />
     <ClInclude Include="STrack.h" />

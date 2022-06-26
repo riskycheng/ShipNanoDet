@@ -1078,28 +1078,23 @@ int main(int argc, char** argv)
 	
 	while (connectionEstablished)
 	{
-		switch (mAppConfig.sourceMode)
+		if (mAppConfig.sourceMode == 3)
 		{
-		case 0: // the offline video mode
-		case 1: // the live local camera mode
-		case 2: // the remote RTSP stream
-			connectionEstablished = videoCap.read(image);
-			break;
-		case 3:
 			image = imread(mAppConfig.sourceLocation.c_str());
-		default:
-			break;
 		}
-
-		if (image.data == nullptr)
+		else
 		{
-			std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
-			std::printf("\n*********************************************************");
-			std::printf("\n************** end of stream, will exit... **************");
-			std::printf("\n*********************************************************");
-			std::printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
-			std::printf("\n");
-			break;
+			connectionEstablished = videoCap.read(image);
+			if (!connectionEstablished)
+			{
+				std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
+				std::printf("\n*********************************************************");
+				std::printf("\n************** camera broke, retry........ **************");
+				std::printf("\n*********************************************************");
+				std::printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
+				std::printf("\n");
+				break;
+			}
 		}
 
 		if (frameIndex % cycle != 0)
