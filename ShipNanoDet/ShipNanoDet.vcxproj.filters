@@ -30,9 +30,6 @@
     <ClCompile Include="ShipDetWithNcnnNanoDet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vlc_reader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="BYTETracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -66,9 +63,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="commonDef.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="vlc_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BYTETracker.h">
