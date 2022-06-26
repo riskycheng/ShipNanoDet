@@ -969,7 +969,7 @@ void sendOutMetricsThread() {
 				std::printf("%s\n", jsonStr.c_str());
 			}
 
-			printf("\nmessages from server:");
+			std::printf("\nmessages from server:");
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
 
 			if (eRet == CURLE_FAILED_INIT)
@@ -1009,6 +1009,104 @@ void sendOutMetricsThread() {
 	}
 }
 
+void openCameraThread() {
+	int reTryCnt = 100000;
+	// model path
+	bool modelInit = false;
+	auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &mAppConfig, modelInit);
+
+	if (modelInit)
+	{
+		std::printf("openVINO model initialized successfully! \n");
+	}
+	else
+	{
+		std::printf("openVINO model initialized failed, exiting... \n");
+		return;
+	}
+	// the offline video mode
+	int cycle = mAppConfig.detect_cycle;
+	FrameResult frameResult;
+	cv::Mat image;
+	int frameIndex = 0;
+	
+	bool connectionEstablished = false;
+	while (reTryCnt-- > 0)
+	{
+		std::printf("running @%d round\n", reTryCnt);
+		cv::VideoCapture videoCap;
+		try {
+			connectionEstablished = videoCap.open(mAppConfig.sourceLocation.c_str());
+		}
+		catch (...)
+		{
+			std::printf("\nerror....\n");
+		}
+
+		if (!videoCap.isOpened() || !connectionEstablished)
+		{
+			// jump out for reconnection
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			std::printf("\n>>>>>>>>>>\ncamera disconnected, retry in 1s...\n");
+			continue;
+		}
+
+		cv::namedWindow(VERSION_CODE, cv::WINDOW_NORMAL);
+
+		while (connectionEstablished)
+		{
+			if (mAppConfig.sourceMode == 3)
+			{
+				image = imread(mAppConfig.sourceLocation.c_str());
+			}
+			else
+			{
+				connectionEstablished = videoCap.read(image);
+				if (!connectionEstablished)
+				{
+					std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
+					std::printf("\n*********************************************************");
+					std::printf("\n************** camera broke, retry........ **************");
+					std::printf("\n*********************************************************");
+					std::printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
+					std::printf("\n");
+					break;
+				}
+			}
+
+			if (frameIndex % cycle != 0)
+			{
+				// not inference, use the previous one
+				frameResult = imageRun(frameIndex, detector, image, &mAppConfig, true);
+				cv::waitKey(30);
+			}
+			else
+			{
+				// do the inference
+				frameResult = imageRun(frameIndex, detector, image, &mAppConfig, false);
+			}
+
+			frameIndex++;
+			// print out metrics
+			printFrameResult_(frameResult);
+
+			// sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
+			//std::thread threadAction(sendOutMetrics, appConfig.remoteUrl.c_str(), jsonStr);
+			// keep adding to the global queue
+			mFrameResutsCached.emplace_back(frameResult);
+		}
+
+		if (videoCap.isOpened())
+			videoCap.release();
+
+		cv::destroyAllWindows();
+		cv::waitKey(1);
+		// jump out for reconnection
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::printf("\n>>>>>>>>>>\ncamera disconnected, retry in 1s...\n");
+	}
+}
+
 int main(int argc, char** argv)
 {
 	if (argc != 2)
@@ -1029,109 +1127,11 @@ int main(int argc, char** argv)
 	parseConfig(jsonFilePath);
 	printAppConfig(mAppConfig);
 
-	// parse the video file path
-	std::string videoFilePath = mAppConfig.sourceLocation;
+	//thread rst = thread(sendOutMetricsThread);
 
-	// model path
-	bool modelInit = false;
-	auto detector = NanoDetVINO("./models/openVINOModel/nanodet.xml", &mAppConfig, modelInit);
+	thread camThread = thread(openCameraThread);
+	camThread.join();
 
-	if (modelInit)
-	{
-		std::printf("openVINO model initialized successfully! \n");
-	}
-	else
-	{
-		std::printf("openVINO model initialized failed, exiting... \n");
-		return -1;
-	}
-
-
-	// the offline video mode
-	cv::VideoCapture videoCap;
-	bool connectionEstablished = true;
-	switch (mAppConfig.sourceMode)
-	{
-	case 0: // the offline video mode
-	case 1: // the live local camera mode
-	case 2: // the remote RTSP stream
-		if (mAppConfig.enable_debugging_log)
-			std::printf("loading stream from:%s \n", videoFilePath.c_str());
-		connectionEstablished = videoCap.open(videoFilePath.c_str());
-		break;
-	case 3: // the still image mode, it is mainly used for debugging
-		if (mAppConfig.enable_debugging_log)
-			std::printf("loading image from:%s \n", mAppConfig.sourceLocation.c_str());
-		break;
-	default:
-		break;
-	}
-
-	thread rst = thread(sendOutMetricsThread);
-
-	int cycle = mAppConfig.detect_cycle;
-	FrameResult frameResult;
-	cv::Mat image;
-	int frameIndex = 0;
-	cv::namedWindow(VERSION_CODE, cv::WINDOW_AUTOSIZE);
-	
-	
-	while (connectionEstablished)
-	{
-		if (mAppConfig.sourceMode == 3)
-		{
-			image = imread(mAppConfig.sourceLocation.c_str());
-		}
-		else
-		{
-			connectionEstablished = videoCap.read(image);
-			if (!connectionEstablished)
-			{
-				std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
-				std::printf("\n*********************************************************");
-				std::printf("\n************** camera broke, retry........ **************");
-				std::printf("\n*********************************************************");
-				std::printf("\n<<<<<<<<<<<<<<<<<<<<<<<< warning <<<<<<<<<<<<<<<<<<<<<<<<");
-				std::printf("\n");
-				break;
-			}
-		}
-
-		if (frameIndex % cycle != 0)
-		{
-			// not inference, use the previous one
-			frameResult = imageRun(frameIndex, detector, image, &mAppConfig, true);
-			cv::waitKey(30);
-		}
-		else
-		{
-			// do the inference
-			frameResult = imageRun(frameIndex, detector, image, &mAppConfig, false);
-		}
-
-		frameIndex++;
-		// print out metrics
-		printFrameResult_(frameResult);
-
-		// sendOutMetrics(appConfig.remoteUrl.c_str(), jsonStr);
-		//std::thread threadAction(sendOutMetrics, appConfig.remoteUrl.c_str(), jsonStr);
-		// keep adding to the global queue
-		mFrameResutsCached.emplace_back(frameResult);
-	}
-
-	if (videoCap.isOpened())
-	{
-		videoCap.release();
-	}
-
-	if (mAppConfig.sourceMode == 3)
-	{
-		// indicate it is image mode
-		waitKey();
-	}
-
-	image.release();
-	cv::destroyAllWindows();
 	std::printf("\n Application exited ... \n");
 
 	return 0;
