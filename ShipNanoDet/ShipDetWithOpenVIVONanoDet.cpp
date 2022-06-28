@@ -1127,11 +1127,24 @@ int main(int argc, char** argv)
 	parseConfig(jsonFilePath);
 	printAppConfig(mAppConfig);
 
-	//thread rst = thread(sendOutMetricsThread);
+	thread rst = thread(sendOutMetricsThread);
 
 	thread camThread = thread(openCameraThread);
 	camThread.join();
 
+	mSendOutThreadRun = false;
+
+	if (rst.joinable())
+	{
+		rst.join();
+		printf("metrics sending thread joined...\n");
+	}
+	else
+	{
+		printf("not able to join metrics sending thread...\n");
+	}
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	std::printf("\n Application exited ... \n");
 
 	return 0;
