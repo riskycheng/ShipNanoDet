@@ -673,7 +673,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 		sprintf(shipCntCurrent, "NOW Ships:%llu", currentShips.size());
 		cv::Size cntLabelSize_shipTotal = cv::getTextSize(shipTotal, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
 		cv::Size cntLabelSize_shipCntCurrent = cv::getTextSize(shipCntCurrent, cv::FONT_HERSHEY_SIMPLEX, 0.8, 1, &baseLine);
-		cv::Point cntStartPoint(image.cols - 200, 50);
+		cv::Point cntStartPoint(image.cols - 250, 50);
 		
 		//background for the current counting messages
 		cv::rectangle(image, cv::Rect(cntStartPoint - cv::Point(0, cntLabelSize_shipTotal.height),
