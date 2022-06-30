@@ -166,6 +166,7 @@ int calculateDirection(std::vector<BoxInfo> historyBoxLocations, int minLengthTo
 			delta_negative++;
 	}
 	movingDirection = delta_negative >= delta_positive ? 0 : 1;
+	delete[] xArrays;
 	return movingDirection;
 }
 
@@ -191,6 +192,7 @@ void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
 	{
 		printf("error: the roi is illegal to draw this patch\n");
 	}
+	mask.release();
 	srcImage.release();
 }
 
