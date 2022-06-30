@@ -9,7 +9,7 @@
 #include "commonDef.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v2.1_20220626_openVINO"
+#define VERSION_CODE "shipDet v2.1_20220630_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;

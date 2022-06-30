@@ -183,7 +183,13 @@ void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
 		split(srcImage, rgbLayer);
 		Mat cs[3] = {rgbLayer[0], rgbLayer[1], rgbLayer[2]};
 		merge(cs, 3, srcImage);
-		mask = rgbLayer[3]; // alpha channel as mask
+		mask = rgbLayer[3].clone();// alpha channel as mask
+		// release 3 channels
+		rgbLayer[0].release();
+		rgbLayer[1].release();
+		rgbLayer[2].release();
+		rgbLayer[3].release();
+
 	}
 	cv::Rect roi(location.x, location.y, srcImage.cols, srcImage.rows);
 	if (roi.x >= 0 && roi.y >= 0 && roi.x + roi.width < frame.cols && roi.y + roi.height < frame.rows)
@@ -192,6 +198,7 @@ void drawPatch(const Mat& srcImage_, Mat& frame, const cv::Point location) {
 	{
 		printf("error: the roi is illegal to draw this patch\n");
 	}
+	rgbLayer.clear();
 	mask.release();
 	srcImage.release();
 }
