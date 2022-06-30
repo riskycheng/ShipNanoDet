@@ -17,6 +17,7 @@ using namespace cv;
 using namespace byte_track;
 
 #define DROP_FIRST_COUPLE_DETECTIONS 30
+#define MAX_ALLOWED_RECORDS_FOR_ONE_SHIP 1000
 #define MIN_LEN_TO_DECIDE_MOVING_DIR 30
 #define MIN_LEN_TO_DECIDE_MOVING_OUT_OF_VIEW 30 * 10
 
@@ -857,6 +858,13 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 				{
 					founded = true;
 					if (mShipsInTracking[t].droppedFirstCounts++ < DROP_FIRST_COUPLE_DETECTIONS) break;
+
+					// clear the history records in case it is too large
+					if (mShipsInTracking[t].historyBoxLocations.size() >= MAX_ALLOWED_RECORDS_FOR_ONE_SHIP)
+					{
+						mShipsInTracking[t].historyBoxLocations.erase(mShipsInTracking[t].historyBoxLocations.begin());
+					}
+
 					mShipsInTracking[t].historyBoxLocations.push_back(boxInfo_);
 					// update the cooresponding moving direction
 					int movingDir = calculateDirection(mShipsInTracking[t].historyBoxLocations, MIN_LEN_TO_DECIDE_MOVING_DIR);
@@ -880,7 +888,8 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 			if (ship.outOfView || ship.historyBoxLocations.empty())
 			{
 				if (mAppConfig.enable_debugging_log)
-					std::printf("this ship[%d] is out-of-view, skip checking...\n", ship.trackerID);
+					std::printf("this ship[%d] is out-of-view, skip checking and clear its history locations...\n", ship.trackerID);
+				ship.historyBoxLocations.clear();
 				continue;
 			}
 
@@ -1086,6 +1095,15 @@ void openCameraThread() {
 				frameResult = imageRun(frameIndex, detector, image, &mAppConfig, false);
 			}
 
+			if (mAppConfig.enable_debugging_log)
+			{
+				printf("mFrameResutsCached-Len:%llu \n", mFrameResutsCached.size());
+				int index = 0;
+				for (auto& ship : mShipsInTracking)
+				{
+					printf("mShipsInTracking[%d].records:%llu\n", index++, ship.historyBoxLocations.size());
+				}
+			}
 			frameIndex++;
 			// print out metrics
 			printFrameResult_(frameResult);

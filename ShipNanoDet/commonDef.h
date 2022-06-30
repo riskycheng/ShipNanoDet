@@ -34,7 +34,7 @@ struct FrameResult {
 	std::vector<ShipBox> boxes;
 	bool isInDanger;
 	/* expose the dangerous region indicating the configs from json file */
-	int* dangerousRegion = new int[8];
+	int dangerousRegion[8];
 
 	/* the timestamp for this current frame */
 	string timeStamp;
