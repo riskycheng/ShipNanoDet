@@ -1060,8 +1060,11 @@ void openCameraThread() {
 			continue;
 		}
 
-		cv::namedWindow(VERSION_CODE, cv::WINDOW_NORMAL);
-
+		if (mAppConfig.enable_debugging_log)
+		{
+			cv::namedWindow(VERSION_CODE, cv::WINDOW_NORMAL);
+			cv::resizeWindow(VERSION_CODE, cv::Size(1920, 1080));
+		}
 		while (connectionEstablished)
 		{
 			if (mAppConfig.sourceMode == 3)
@@ -1161,6 +1164,13 @@ int main(int argc, char** argv)
 	{
 		printf("not able to join metrics sending thread...\n");
 	}
+
+	if (mAppConfig.enable_debugging_log)
+	{
+		//destroy windows and release memory
+		destroyAllWindows();
+	}
+
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 	std::printf("\n Application exited ... \n");
