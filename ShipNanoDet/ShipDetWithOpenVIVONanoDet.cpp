@@ -16,6 +16,9 @@ using namespace std;
 using namespace cv;
 using namespace byte_track;
 
+#define	MAX_BUFFERRED_FRAME_CNT 1
+#define	MAX_RTSP_FPS 2
+
 #define DROP_FIRST_COUPLE_DETECTIONS 30
 #define MAX_ALLOWED_RECORDS_FOR_ONE_SHIP 1000
 #define MIN_LEN_TO_DECIDE_MOVING_DIR 30
@@ -998,7 +1001,7 @@ void sendOutMetricsThread() {
 
 			std::printf("\nmessages from server:");
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
-
+			std::printf("\n");
 			if (eRet == CURLE_FAILED_INIT)
 			{
 				std::printf("[error] failed to init the Curl interface...\n");
@@ -1062,6 +1065,13 @@ void openCameraThread() {
 	{
 		std::printf("running @%d round\n", reTryCnt);
 		cv::VideoCapture videoCap;
+		videoCap.set(cv::CAP_PROP_BUFFERSIZE, MAX_BUFFERRED_FRAME_CNT);
+		if (mAppConfig.sourceMode == 2)
+		{
+			videoCap.set(cv::CAP_PROP_FPS, MAX_RTSP_FPS);
+		}
+
+		videoCap.set(cv::CAP_PROP_POS_FRAMES, MAX_BUFFERRED_FRAME_CNT);
 		try {
 			connectionEstablished = videoCap.open(mAppConfig.sourceLocation.c_str());
 		}
@@ -1108,7 +1118,7 @@ void openCameraThread() {
 			{
 				// not inference, use the previous one
 				frameResult = imageRun(frameIndex, detector, image, &mAppConfig, true);
-				cv::waitKey(30);
+				cv::waitKey(1);
 			}
 			else
 			{
