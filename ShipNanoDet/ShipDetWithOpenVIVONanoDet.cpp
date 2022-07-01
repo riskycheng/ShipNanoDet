@@ -745,7 +745,7 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 			cv::FONT_HERSHEY_SIMPLEX, 1.0f, cv::Scalar(255, 255, 255));
 	}
 
-	resize(image, image, cv::Size(1920, 1080), cv::INTER_NEAREST);
+	resize(image, image, cv::Size(DISPLAY_WIN_WIDTH, DISPLAY_WIN_HEIGHT), cv::INTER_NEAREST);
 	cv::imshow(VERSION_CODE, image);
 	cv::waitKey(1);
 	image.release();
@@ -1081,7 +1081,7 @@ void openCameraThread() {
 		if (mAppConfig.enable_debugging_log)
 		{
 			cv::namedWindow(VERSION_CODE, cv::WINDOW_NORMAL);
-			cv::resizeWindow(VERSION_CODE, cv::Size(1920, 1080));
+			cv::resizeWindow(VERSION_CODE, cv::Size(DISPLAY_WIN_WIDTH, DISPLAY_WIN_HEIGHT));
 		}
 		while (connectionEstablished)
 		{
