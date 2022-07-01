@@ -21,6 +21,9 @@ using namespace byte_track;
 #define MIN_LEN_TO_DECIDE_MOVING_DIR 30
 #define MIN_LEN_TO_DECIDE_MOVING_OUT_OF_VIEW 30 * 10
 
+#define DISPLAY_WIN_WIDTH 1920 / 4 * 3
+#define DISPLAY_WIN_HEIGHT 1080 / 4 * 3
+
 // the global ships in tracking
 vector<ShipInTracking> mShipsInTracking;
 
@@ -755,8 +758,6 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 	int height = detector.input_size[0];
 	int width = detector.input_size[1];
 
-	
-
 	FrameResult frameResult = FrameResult();
 
 	// get the current system time stamp
@@ -793,14 +794,17 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 	bool touchedWarning = false;
 	if (skip)
 	{
-		if (mAppConfig.enable_debugging_log || true)
+		if (mAppConfig.enable_debugging_log)
 			// not inference, use the previous one
 			std::printf("use the previous inferred result...\n");
-		touchedWarning = touchWarningLinesPologyn(appConfig, bufferedResultsForCycles, effect_roi);
-		if (mAppConfig.need_UIs)
+		if (!bufferedResultsForCycles.empty())
 		{
-			draw_bboxes_inTracking(image, mShipsInTracking, bufferedResultsForCycles, appConfig, touchedWarning);
-			cv::waitKey(30);
+			touchedWarning = touchWarningLinesPologyn(appConfig, bufferedResultsForCycles, effect_roi);
+			if (mAppConfig.need_UIs)
+			{
+				draw_bboxes_inTracking(image, mShipsInTracking, bufferedResultsForCycles, appConfig, touchedWarning);
+				cv::waitKey(1);
+			}
 		}
 	}
 	else
