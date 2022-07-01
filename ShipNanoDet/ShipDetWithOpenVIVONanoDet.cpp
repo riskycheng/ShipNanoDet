@@ -9,7 +9,7 @@
 #include "commonDef.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v2.1_20220630_openVINO"
+#define VERSION_CODE "shipDet v2.2_20220701_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -748,12 +748,14 @@ void draw_bboxes_inTracking(const cv::Mat& bgr, std::vector<ShipInTracking> ship
 	image.release();
 }
 
+// buffered results
+std::vector<BoxInfo> bufferedResultsForCycles;
+
 FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_* appConfig, bool skip) {
 	int height = detector.input_size[0];
 	int width = detector.input_size[1];
 
-	// buffered results
-	std::vector<BoxInfo> results;
+	
 
 	FrameResult frameResult = FrameResult();
 
@@ -791,13 +793,13 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 	bool touchedWarning = false;
 	if (skip)
 	{
-		if (mAppConfig.enable_debugging_log)
+		if (mAppConfig.enable_debugging_log || true)
 			// not inference, use the previous one
 			std::printf("use the previous inferred result...\n");
-		touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+		touchedWarning = touchWarningLinesPologyn(appConfig, bufferedResultsForCycles, effect_roi);
 		if (mAppConfig.need_UIs)
 		{
-			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
+			draw_bboxes_inTracking(image, mShipsInTracking, bufferedResultsForCycles, appConfig, touchedWarning);
 			cv::waitKey(30);
 		}
 	}
@@ -818,7 +820,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		//imwrite(imageName, resized_img);
 		//delete[] imageName;
 
-		results = detector.detect(resized_img);
+		bufferedResultsForCycles = detector.detect(resized_img);
 
 		end = clock();
 		cost = difftime(end, start);
@@ -828,7 +830,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		start = clock();
 
 		// applying with tracker
-		auto detectedObjs = convertBoxInfos2Objects(results);
+		auto detectedObjs = convertBoxInfos2Objects(bufferedResultsForCycles);
 		auto output_stracks = gTracker.update(detectedObjs);
 
 		end = clock();
@@ -839,7 +841,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		start = clock();
 
 		// update the results
-		results.clear();
+		bufferedResultsForCycles.clear();
 		for (const auto& outputs_per_frame : output_stracks)
 		{
 			const auto& rect = outputs_per_frame->getRect();
@@ -860,7 +862,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 			auto regionLoc = calculateShipRegionLoc(appConfig, boxInfo_);
 			boxInfo_.regionLoc = regionLoc;
 
-			results.push_back(boxInfo_);
+			bufferedResultsForCycles.push_back(boxInfo_);
 
 			// add to the shipsInTracking array
 			bool founded = false;
@@ -933,20 +935,20 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 
 		end = clock();
 		cost = difftime(end, start);
-		if (!results.empty())
-			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
+		if (!bufferedResultsForCycles.empty())
+			touchedWarning = touchWarningLinesPologyn(appConfig, bufferedResultsForCycles, effect_roi);
 		if (mAppConfig.enable_debugging_log)
 			std::printf("post-processing det-track results(region-cal / dir-cal) cost: %.2f ms \n", cost);
 		if (mAppConfig.need_UIs)
 		{
-			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
+			draw_bboxes_inTracking(image, mShipsInTracking, bufferedResultsForCycles, appConfig, touchedWarning);
 			cv::waitKey(1);
 		}
 		resized_img.release();
 	}
 	// update fields of FrameResult
 	frameResult.frameID = frameID;
-	for (BoxInfo& box : results)
+	for (BoxInfo& box : bufferedResultsForCycles)
 	{
 		auto shipBox = ShipBox();
 		shipBox.x = box.x1;
