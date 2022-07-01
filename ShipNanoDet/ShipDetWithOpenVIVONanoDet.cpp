@@ -820,11 +820,23 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 
 		results = detector.detect(resized_img);
 
+		end = clock();
+		cost = difftime(end, start);
+		if (mAppConfig.enable_debugging_log)
+			std::printf("pure model inference with OpenVINO cost: %.2f ms \n", cost);
+
+		start = clock();
+
 		// applying with tracker
 		auto detectedObjs = convertBoxInfos2Objects(results);
 		auto output_stracks = gTracker.update(detectedObjs);
 
+		end = clock();
+		cost = difftime(end, start);
+		if (mAppConfig.enable_debugging_log)
+			std::printf("pure tracking cost: %.2f ms \n", cost);
 
+		start = clock();
 
 		// update the results
 		results.clear();
@@ -924,7 +936,7 @@ FrameResult imageRun(int frameID, NanoDetVINO& detector, Mat& image, AppConfig_*
 		if (!results.empty())
 			touchedWarning = touchWarningLinesPologyn(appConfig, results, effect_roi);
 		if (mAppConfig.enable_debugging_log)
-			std::printf("inference video with OpenVINO cost: %.2f ms \n", cost);
+			std::printf("post-processing det-track results(region-cal / dir-cal) cost: %.2f ms \n", cost);
 		if (mAppConfig.need_UIs)
 		{
 			draw_bboxes_inTracking(image, mShipsInTracking, results, appConfig, touchedWarning);
