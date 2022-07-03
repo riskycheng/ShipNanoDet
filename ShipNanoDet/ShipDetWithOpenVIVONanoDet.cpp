@@ -9,7 +9,7 @@
 #include "commonDef.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v2.2_20220701_openVINO"
+#define VERSION_CODE "shipDet v2.2.1_20220703_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -1088,7 +1088,7 @@ void openCameraThread() {
 			continue;
 		}
 
-		if (mAppConfig.enable_debugging_log)
+		if (mAppConfig.need_UIs)
 		{
 			cv::namedWindow(VERSION_CODE, cv::WINDOW_NORMAL);
 			cv::resizeWindow(VERSION_CODE, cv::Size(DISPLAY_WIN_WIDTH, DISPLAY_WIN_HEIGHT));
@@ -1147,9 +1147,11 @@ void openCameraThread() {
 
 		if (videoCap.isOpened())
 			videoCap.release();
-
-		cv::destroyAllWindows();
-		cv::waitKey(1);
+		if (mAppConfig.need_UIs)
+		{
+			cv::destroyAllWindows();
+			cv::waitKey(1);
+		}
 		// jump out for reconnection
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		std::printf("\n>>>>>>>>>>\ncamera disconnected, retry in 1s...\n");
