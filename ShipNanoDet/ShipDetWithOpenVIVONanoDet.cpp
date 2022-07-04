@@ -9,7 +9,7 @@
 #include "commonDef.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v2.2.1_20220703_openVINO"
+#define VERSION_CODE "shipDet v2.2.2_20220704_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -24,8 +24,11 @@ using namespace byte_track;
 #define MIN_LEN_TO_DECIDE_MOVING_DIR 30
 #define MIN_LEN_TO_DECIDE_MOVING_OUT_OF_VIEW 30 * 10
 
-#define DISPLAY_WIN_WIDTH 1920 / 4 * 3
-#define DISPLAY_WIN_HEIGHT 1080 / 4 * 3
+#define FRAME_SRC_WIDTH 1920
+#define FRAME_SRC_HEIGHT 1080
+
+#define DISPLAY_WIN_WIDTH FRAME_SRC_WIDTH / 4 * 3
+#define DISPLAY_WIN_HEIGHT FRAME_SRC_HEIGHT / 4 * 3
 
 // the global ships in tracking
 vector<ShipInTracking> mShipsInTracking;
@@ -1102,6 +1105,15 @@ void openCameraThread() {
 			else
 			{
 				connectionEstablished = videoCap.read(image);
+				int tmpWidth = videoCap.get(cv::CAP_PROP_FRAME_WIDTH);
+				int tmpHeight = videoCap.get(cv::CAP_PROP_FRAME_HEIGHT);
+
+				if (tmpWidth * tmpHeight < FRAME_SRC_WIDTH * FRAME_SRC_HEIGHT || image.rows * image.cols < FRAME_SRC_WIDTH * FRAME_SRC_HEIGHT)
+				{
+					printf("\nwarning >>>> uncomplete image received, will skip to avoid corruption!\n");
+					continue;
+				}
+
 				if (!connectionEstablished)
 				{
 					std::printf("\n>>>>>>>>>>>>>>>>>>>>>>>> warning >>>>>>>>>>>>>>>>>>>>>>>>");
