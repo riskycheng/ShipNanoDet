@@ -95,12 +95,22 @@ string generateJsonResult(FrameResult frameResult)
 	return jsonResult;
 }
 
+size_t writefunc(void* ptr, size_t size, size_t nmemb, std::string* s)
+{
+	s->append(static_cast<char*>(ptr), size * nmemb);
+	return size * nmemb;
+}
+
 CURLcode sendOutMetrics(AppConfig_ appConfig, const string jsonData)
 {
 	CURL* curl;
-	CURLcode eRet = CURLcode::CURLE_OK;
+	CURLcode eRet = CURLcode(CURLE_OK);
 	curl = curl_easy_init();
 	if (curl) {
+		std::string temp;
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &temp);
+
 		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_easy_setopt(curl, CURLOPT_URL, appConfig.remoteUrl.c_str());
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -112,6 +122,8 @@ CURLcode sendOutMetrics(AppConfig_ appConfig, const string jsonData)
 		const char* data = jsonData.c_str();
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
 		eRet = curl_easy_perform(curl);
+		
+		printf("Algorithm-Client got feedback:%s\n", temp.empty() ? "server unreachable!" : temp.c_str());
 	}
 	curl_easy_cleanup(curl);
 	return eRet;

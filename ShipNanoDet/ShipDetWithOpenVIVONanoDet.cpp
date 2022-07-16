@@ -9,7 +9,7 @@
 #include "commonDef.h"
 #include "BYTETracker.h"
 
-#define VERSION_CODE "shipDet v2.2.2_20220704_openVINO"
+#define VERSION_CODE "shipDet v2.3_20220716_openVINO"
 #define CAM_URL "http://shanghai.wangshiyao.com:8005/Info/cameraInfo"
 using namespace Json;
 using namespace std;
@@ -1002,35 +1002,13 @@ void sendOutMetricsThread() {
 				std::printf("%s\n", jsonStr.c_str());
 			}
 
-			std::printf("\nmessages from server:");
 			auto eRet = sendOutMetrics(mAppConfig, jsonStr);
-			std::printf("\n");
-			if (eRet == CURLE_FAILED_INIT)
+			
+			thread thd = thread(sendOutMetrics, mAppConfig, jsonStr);
+
+			if (thd.joinable())
 			{
-				std::printf("[error] failed to init the Curl interface...\n");
-			}
-			else if (eRet == CURLE_COULDNT_RESOLVE_PROXY || eRet == CURLE_COULDNT_RESOLVE_HOST)
-			{
-				std::printf("[error] cannot resolve the host, ensure the host address is correct...\n");
-			}
-			else if (eRet == CURLE_COULDNT_CONNECT)
-			{
-				std::printf("[error] cannot connect to remote serive, ensure it started properly...\n");
-			}
-			else if (eRet == CURLE_OK)
-			{
-				if (mAppConfig.enable_debugging_log)
-				{
-					std::printf("[success] remote API calling succeeds...\n");
-				}
-			}
-			else if (eRet == CURLE_OPERATION_TIMEDOUT)
-			{
-				std::printf("[error] timeOut sending out metrics to %s...\n", mAppConfig.remoteUrl.c_str());
-			}
-			else
-			{
-				std::printf("[error] failed to send out metrics due to %s...\n", eRet);
+				thd.join();
 			}
 			// remove the first one 
 			mFrameResutsCached.erase(mFrameResutsCached.begin());
